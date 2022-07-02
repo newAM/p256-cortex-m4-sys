@@ -38,13 +38,27 @@ mod tests {
     fn check_range_n() {
         use p256_cortex_m4_sys::P256_check_range_n;
 
-        let zero: [u32; 8] = [0; 8];
-        let result: bool = unsafe { P256_check_range_n(zero.as_ptr()) };
-        defmt::assert!(!result, "zero is not in range");
+        const ZERO: [u32; 8] = [0; 8];
+        let valid: bool = unsafe { P256_check_range_n(ZERO.as_ptr()) };
+        defmt::assert!(!valid, "zero is not in range");
 
-        let mut one: [u32; 8] = [0; 8];
-        one[0] = 1;
-        let result: bool = unsafe { P256_check_range_n(one.as_ptr()) };
-        defmt::assert!(result, "1 is in range");
+        const ONE: [u32; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
+        let valid: bool = unsafe { P256_check_range_n(ONE.as_ptr()) };
+        defmt::assert!(valid, "1 is in range");
+
+        // n = 2**256 - 2**224 + 2**192 - int("4319055258e8617b0c46353d039cdaaf", 16)
+        const N: [u32; 8] = [
+            0xfc632551, 0xf3b9cac2, 0xa7179e84, 0xbce6faad, 0xffffffff, 0xffffffff, 0x00000000,
+            0xffffffff,
+        ];
+        let valid: bool = unsafe { P256_check_range_n(N.as_ptr()) };
+        defmt::assert!(!valid, "N is not within range");
+
+        const N_MINUS_ONE: [u32; 8] = [
+            0xfc632550, 0xf3b9cac2, 0xa7179e84, 0xbce6faad, 0xffffffff, 0xffffffff, 0x00000000,
+            0xffffffff,
+        ];
+        let valid: bool = unsafe { P256_check_range_n(N_MINUS_ONE.as_ptr()) };
+        defmt::assert!(valid, "N_MINUS_ONE is within range");
     }
 }
