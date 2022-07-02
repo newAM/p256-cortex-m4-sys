@@ -618,34 +618,3 @@ bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t priv
 }
 #endif
 #endif
-
-#if include_p256_decode_point || include_p256_decompress_point
-bool p256_octet_string_to_point(uint32_t x[8], uint32_t y[8], const uint8_t* input, uint32_t input_len_in_bytes) {
-    if (input_len_in_bytes < 33) return false;
-    p256_convert_endianness(x, input + 1, 32);
-    if (!P256_check_range_p(x)) {
-        return false;
-    }
-    #if include_p256_decode_point
-    if ((input[0] == 4 || (input[0] >> 1) == 3) && input_len_in_bytes == 65) {
-        p256_convert_endianness(y, input + 33, 32);
-        if (!P256_check_range_p(y)) {
-            return false;
-        }
-        if ((input[0] >> 1) == 3 && (input[0] & 1) != (y[0] & 1)) {
-            return false;
-        }
-        uint32_t x_mont[8], y_mont[8];
-        P256_to_montgomery(x_mont, x);
-        P256_to_montgomery(y_mont, y);
-        return P256_point_is_on_curve(x_mont, y_mont);
-    }
-    #endif
-    #if include_p256_decompress_point
-    if ((input[0] >> 1) == 1 && input_len_in_bytes == 33) {
-        return P256_decompress_point(y, x, input[0] & 1);
-    }
-    #endif
-    return false;
-}
-#endif

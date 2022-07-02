@@ -356,21 +356,3 @@ extern "C" {
         in_y: *const u32,
     ) -> bool;
 }
-extern "C" {
-    #[doc = " Decodes a point according to the three encodings above."]
-    #[doc = ""]
-    #[doc = " include_p256_decode_point: first byte is \"04\", \"06\" or \"07\" and input length is 65 bytes"]
-    #[doc = " include_p256_decompress_point: first byte is \"02\" or \"03\" and input length is 33 bytes"]
-    #[doc = ""]
-    #[doc = " Returns true if the input string confirms to a valid encoding and the point lies on the curve,"]
-    #[doc = " otherwise false."]
-    #[doc = ""]
-    #[doc = " NOTE: The return value MUST be checked in case the point is not guaranteed to lie on the curve (e.g. if it"]
-    #[doc = " is received from an untrusted party)."]
-    pub fn p256_octet_string_to_point(
-        x: *mut u32,
-        y: *mut u32,
-        input: *const u8,
-        input_len_in_bytes: u32,
-    ) -> bool;
-}
