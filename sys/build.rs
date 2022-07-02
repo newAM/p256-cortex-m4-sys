@@ -2,6 +2,7 @@ use std::env;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=P256-Cortex-M4/p256-cortex-m4-asm-gcc.S");
     println!("cargo:rerun-if-changed=P256-Cortex-M4/p256-cortex-m4.h");
     println!("cargo:rerun-if-changed=P256-Cortex-M4/p256-cortex-m4.c");
     println!("cargo:rerun-if-changed=p256-cortex-m4-range-checks.h");
