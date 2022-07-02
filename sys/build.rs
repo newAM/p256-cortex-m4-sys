@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let builder = builder
             .flag("-std=c11")
             .file("P256-Cortex-M4/p256-cortex-m4.c")
-            .file("P256-Cortex-M4/p256-cortex-m4-asm-gcc.S")
+            // .file("P256-Cortex-M4/p256-cortex-m4-asm-gcc.S")
             .flag("-march=armv7e-m");
 
         builder.compile("p256-cortex-m4-sys");
