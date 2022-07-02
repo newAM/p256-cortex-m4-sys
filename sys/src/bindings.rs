@@ -357,18 +357,6 @@ extern "C" {
     ) -> bool;
 }
 extern "C" {
-    #[doc = " Uncompressed encoding: \"04 || Px || Py\"."]
-    pub fn p256_point_to_octet_string_uncompressed(out: *mut u8, x: *const u32, y: *const u32);
-}
-extern "C" {
-    #[doc = " Compressed encoding: \"02 || Px\" if Py is even and \"03 || Px\" if Py is odd."]
-    pub fn p256_point_to_octet_string_compressed(out: *mut u8, x: *const u32, y: *const u32);
-}
-extern "C" {
-    #[doc = " Hybrid encoding: \"06 || Px || Py\" if Py is even and \"07 || Px || Py\" if Py is odd (a pretty useless encoding)."]
-    pub fn p256_point_to_octet_string_hybrid(out: *mut u8, x: *const u32, y: *const u32);
-}
-extern "C" {
     #[doc = " Decodes a point according to the three encodings above."]
     #[doc = ""]
     #[doc = " include_p256_decode_point: first byte is \"04\", \"06\" or \"07\" and input length is 65 bytes"]

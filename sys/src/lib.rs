@@ -54,3 +54,52 @@ pub unsafe extern "C" fn p256_convert_endianness(
         out_slice[i] = t;
     }
 }
+
+/// Uncompressed encoding
+///
+/// `04 || Px || Py`.
+#[no_mangle]
+pub unsafe extern "C" fn p256_point_to_octet_string_uncompressed(
+    out: *mut u8,
+    x: *const u32,
+    y: *const u32,
+) {
+    // uint8_t out[65], const uint32_t x[8], const uint32_t y[8]
+    let out_slice: &mut [u8] = slice::from_raw_parts_mut(out, 65);
+    out_slice[0] = 4;
+    p256_convert_endianness(out.offset(1) as *mut _, x as *const _, 32);
+    p256_convert_endianness(out.offset(33) as *mut _, y as *const _, 32);
+}
+/// Compressed encoding
+///
+/// `02 || Px` if Py is even and `03 || Px` if Py is odd.
+#[no_mangle]
+pub unsafe extern "C" fn p256_point_to_octet_string_compressed(
+    out: *mut u8,
+    x: *const u32,
+    y: *const u32,
+) {
+    // uint8_t out[33], const uint32_t x[8], const uint32_t y[8]
+    let out_slice: &mut [u8] = slice::from_raw_parts_mut(out, 33);
+    let y_slice: &[u32] = slice::from_raw_parts(y, 8);
+    out_slice[0] = (2 + (y_slice[0] & 1)) as u8;
+    p256_convert_endianness(out.offset(1) as *mut _, x as *const _, 32);
+}
+
+/// Hybrid encoding
+///
+/// `06 || Px || Py` if Py is even and `07 || Px || Py` if Py is odd
+/// (a pretty useless encoding).
+#[no_mangle]
+pub unsafe extern "C" fn p256_point_to_octet_string_hybrid(
+    out: *mut u8,
+    x: *const u32,
+    y: *const u32,
+) {
+    // uint8_t out[65], const uint32_t x[8], const uint32_t y[8]
+    let out_slice: &mut [u8] = slice::from_raw_parts_mut(out, 65);
+    let y_slice: &[u32] = slice::from_raw_parts(y, 8);
+    out_slice[0] = (6 + (y_slice[0] & 1)) as u8;
+    p256_convert_endianness(out.offset(1) as *mut _, x as *const _, 32);
+    p256_convert_endianness(out.offset(33) as *mut _, y as *const _, 32);
+}

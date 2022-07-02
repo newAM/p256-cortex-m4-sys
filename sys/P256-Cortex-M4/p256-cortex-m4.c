@@ -619,29 +619,6 @@ bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t priv
 #endif
 #endif
 
-#if include_p256_to_octet_string_uncompressed
-void p256_point_to_octet_string_uncompressed(uint8_t out[65], const uint32_t x[8], const uint32_t y[8]) {
-    out[0] = 4;
-    p256_convert_endianness(out + 1, x, 32);
-    p256_convert_endianness(out + 33, y, 32);
-}
-#endif
-
-#if include_p256_to_octet_string_compressed
-void p256_point_to_octet_string_compressed(uint8_t out[33], const uint32_t x[8], const uint32_t y[8]) {
-    out[0] = 2 + (y[0] & 1);
-    p256_convert_endianness(out + 1, x, 32);
-}
-#endif
-
-#if include_p256_to_octet_string_hybrid
-void p256_point_to_octet_string_hybrid(uint8_t out[65], const uint32_t x[8], const uint32_t y[8]) {
-    out[0] = 6 + (y[0] & 1);
-    p256_convert_endianness(out + 1, x, 32);
-    p256_convert_endianness(out + 33, y, 32);
-}
-#endif
-
 #if include_p256_decode_point || include_p256_decompress_point
 bool p256_octet_string_to_point(uint32_t x[8], uint32_t y[8], const uint8_t* input, uint32_t input_len_in_bytes) {
     if (input_len_in_bytes < 33) return false;

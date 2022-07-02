@@ -212,26 +212,20 @@ bool p256_scalarmult_generic(uint32_t result_x[8], uint32_t result_y[8],
 
 // These functions create a big endian octet string representation of a point according to the X.92 standard.
 
-#if include_p256_to_octet_string_uncompressed
 /**
  * Uncompressed encoding: "04 || Px || Py".
  */
 void p256_point_to_octet_string_uncompressed(uint8_t out[65], const uint32_t x[8], const uint32_t y[8]);
-#endif
 
-#if include_p256_to_octet_string_compressed
 /**
  * Compressed encoding: "02 || Px" if Py is even and "03 || Px" if Py is odd.
  */
 void p256_point_to_octet_string_compressed(uint8_t out[33], const uint32_t x[8], const uint32_t y[8]);
-#endif
 
-#if include_p256_to_octet_string_hybrid
 /**
  * Hybrid encoding: "06 || Px || Py" if Py is even and "07 || Px || Py" if Py is odd (a pretty useless encoding).
  */
 void p256_point_to_octet_string_hybrid(uint8_t out[65], const uint32_t x[8], const uint32_t y[8]);
-#endif
 
 #if include_p256_decode_point || include_p256_decompress_point
 /**
