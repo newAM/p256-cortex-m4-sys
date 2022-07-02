@@ -74,11 +74,8 @@ void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should
 
 extern uint32_t P256_order[9];
 
-#if include_p256_mult
 static const uint32_t one_montgomery[8] = {1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0};
-#endif
 
-#if include_p256_verify
 // This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
 static const uint32_t p256_basepoint_precomp[8][2][8] = {
 {{0x18a9143c, 0x79e730d4, 0x5fedb601, 0x75ba95fc, 0x77622510, 0x79fb732b, 0xa53755c6, 0x18905f76},
@@ -98,9 +95,7 @@ static const uint32_t p256_basepoint_precomp[8][2][8] = {
 {{0xbc60055b, 0x72bcd8b7, 0x56e27e4b, 0x3cc23ee, 0xe4819370, 0xee337424, 0xad3da09, 0xe2aa0e43},
 {0x6383c45d, 0x40b8524f, 0x42a41b25, 0xd7663554, 0x778a4797, 0x64efa6de, 0x7079adf4, 0x2042170a}}
 };
-#endif
 
-#if include_fast_p256_basemult
 // This contains two tables, 8 points each in affine coordinates in montgomery form
 // The first table contains these points:
 // (2^192 - 2^128 - 2^64 - 1)G
@@ -151,9 +146,7 @@ static const uint32_t p256_basepoint_precomp2[2][8][2][8] =
 {0x15f39eb7, 0x81aa8814, 0xb98d976c, 0x6ee2fcf5, 0xcf2f717d, 0x5465475d, 0x6860bbd0, 0x8e24d3c4}}
 }
 };
-#endif
 
-#if include_p256_verify || include_p256_sign
 // Takes the leftmost 256 bits in hash (treated as big endian),
 // and converts to little endian integer z.
 static void hash_to_z(uint32_t z[8], const uint8_t* hash, uint32_t hashlen) {
@@ -167,9 +160,7 @@ static void hash_to_z(uint32_t z[8], const uint8_t* hash, uint32_t hashlen) {
         ((uint8_t*)z)[i] = 0;
     }
 }
-#endif
 
-#if include_p256_verify
 // Creates a representation of a (little endian integer),
 // so that r[0] + 2*r[1] + 2^2*r[2] + 2^3*r[3] + ... = a,
 // where each r[i] is -15, -13, ..., 11, 13, 15 or 0.
@@ -205,9 +196,7 @@ static void slide_257(signed char r[257], const uint8_t a[32]) {
         }
     }
 }
-#endif
 
-#if include_p256_sign
 void P256_mod_n_inv(uint32_t out[8], const uint32_t in[8]) {
     // This function follows the algorithm in section 12.1 of https://gcd.cr.yp.to/safegcd-20190413.pdf.
     // It has been altered in the following ways:
@@ -256,9 +245,7 @@ void P256_mod_n_inv(uint32_t out[8], const uint32_t in[8]) {
     // In this implementation, at this point x contains v * 2^-744.
     P256_negate_mod_n_if(out, &state[0].xy[0].value[0], (state[0].xy[0].flip_sign ^ state[0].fg[0].flip_sign ^ state[0].fg[0].signed_value[8]) & 1);
 }
-#endif
 
-#if include_p256_varmult || (include_p256_basemult && !use_fast_p256_basemult)
 // Constant time abs
 static inline uint32_t abs_int(int8_t a) {
     uint32_t a_u = (uint32_t)(int32_t)a;
@@ -338,12 +325,10 @@ static void scalarmult_variable_base(uint32_t output_mont_x[8], uint32_t output_
     // This is done by negating y, since -(x,y) = (x,-y).
     P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
 }
-#endif
+
 
 #define get_bit(arr, i) ((arr[(i) / 32] >> ((i) % 32)) & 1)
 
-#if include_p256_basemult
-#if include_fast_p256_basemult
 // Calculates scalar*G in constant time
 static void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8]) {
     uint32_t scalar2[8];
@@ -412,21 +397,7 @@ static void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mon
     // Negate final result if the scalar was initially even.
     P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
 }
-#else
-static void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8]) {
-    #if !include_p256_verify
-    static const uint32_t p[2][8] =
-    {{0x18a9143c, 0x79e730d4, 0x5fedb601, 0x75ba95fc, 0x77622510, 0x79fb732b, 0xa53755c6, 0x18905f76},
-    {0xce95560a, 0xddf25357, 0xba19e45c, 0x8b4ab8e4, 0xdd21f325, 0xd2e88688, 0x25885d85, 0x8571ff18}};
-    scalarmult_variable_base(output_mont_x, output_mont_y, p[0], p[1], scalar);
-    #else
-    scalarmult_variable_base(output_mont_x, output_mont_y, p256_basepoint_precomp[0][0], p256_basepoint_precomp[0][1], scalar);
-    #endif
-}
-#endif
-#endif
 
-#if include_p256_verify
 bool p256_verify(const uint32_t public_key_x[8], const uint32_t public_key_y[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t r[8], const uint32_t s[8]) {
     if (!P256_check_range_n(r) || !P256_check_range_n(s)) {
         return false;
@@ -490,9 +461,7 @@ bool p256_verify(const uint32_t public_key_x[8], const uint32_t public_key_y[8],
     
     return P256_verify_last_step(r, (constarr)cp);
 }
-#endif
 
-#if include_p256_sign
 bool p256_sign_step1(struct SignPrecomp *result, const uint32_t k[8]) {
     do {
         uint32_t point_res[2][8];
@@ -556,9 +525,7 @@ bool p256_sign(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashl
     }
     return p256_sign_step2(r, s, hash, hashlen_in_bytes, private_key, &t);
 }
-#endif
 
-#if include_p256_keygen || include_p256_raw_scalarmult_base
 bool p256_scalarmult_base(uint32_t result_x[8], uint32_t result_y[8], const uint32_t scalar[8]) {
     if (!P256_check_range_n(scalar)) {
         return false;
@@ -570,15 +537,10 @@ bool p256_scalarmult_base(uint32_t result_x[8], uint32_t result_y[8], const uint
     
 }
 
-#if include_p256_keygen
 bool p256_keygen(uint32_t public_key_x[8], uint32_t public_key_y[8], const uint32_t private_key[8]) {
     return p256_scalarmult_base(public_key_x, public_key_y, private_key);
 }
-#endif
-#endif
 
-
-#if include_p256_varmult
 static bool p256_scalarmult_generic_no_scalar_check(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]) {
     if (!P256_check_range_p(in_x) || !P256_check_range_p(in_y)) {
         return false;
@@ -595,7 +557,6 @@ static bool p256_scalarmult_generic_no_scalar_check(uint32_t output_mont_x[8], u
     return true;
 }
 
-#if include_p256_raw_scalarmult_generic
 bool p256_scalarmult_generic(uint32_t result_x[8], uint32_t result_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]) {
     if (!P256_check_range_n(scalar) || !p256_scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)) {
         return false;
@@ -604,9 +565,7 @@ bool p256_scalarmult_generic(uint32_t result_x[8], uint32_t result_y[8], const u
     P256_from_montgomery(result_y, result_y);
     return true;
 }
-#endif
 
-#if include_p256_ecdh
 bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t private_key[8], const uint32_t others_public_key_x[8], const uint32_t others_public_key_y[8]) {
     uint32_t result_x[8], result_y[8];
     if (!p256_scalarmult_generic_no_scalar_check(result_x, result_y, private_key, others_public_key_x, others_public_key_y)) {
@@ -616,5 +575,3 @@ bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t priv
     p256_convert_endianness(shared_secret, result_x, 32);
     return true;
 }
-#endif
-#endif

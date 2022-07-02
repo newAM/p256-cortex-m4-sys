@@ -21,8 +21,7 @@
  * SOFTWARE.
  */
 
-#ifndef P256_CORTEX_M4_H
-#define P256_CORTEX_M4_H
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -58,7 +57,6 @@ Note: code that processes secret data runs in constant time, in order to mitigat
  */
 void p256_convert_endianness(void* output, const void* input, size_t byte_len);
 
-#if include_p256_verify
 /**
  * Verifies an ECDSA signature.
  *
@@ -68,9 +66,7 @@ bool p256_verify(const uint32_t public_key_x[8], const uint32_t public_key_y[8],
                  const uint8_t* hash, uint32_t hashlen_in_bytes,
                  const uint32_t r[8], const uint32_t s[8])
                  __attribute__((warn_unused_result));
-#endif
 
-#if include_p256_sign
 /**
  * Creates an ECDSA signature.
  *
@@ -145,9 +141,7 @@ bool p256_sign_step1(struct SignPrecomp *result, const uint32_t k[8]) __attribut
 bool p256_sign_step2(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashlen_in_bytes,
                      const uint32_t private_key[8], struct SignPrecomp *sign_precomp)
                      __attribute__((warn_unused_result));
-#endif
 
-#if include_p256_keygen
 /**
  * Calculates the public key from a given private key for use by either ECDSA or ECDH.
  *
@@ -165,9 +159,7 @@ bool p256_sign_step2(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t
 bool p256_keygen(uint32_t public_key_x[8], uint32_t public_key_y[8],
                  const uint32_t private_key[8])
                  __attribute__((warn_unused_result));
-#endif
 
-#if include_p256_ecdh
 /**
  * Generates the shared secret according to the ECDH standard.
  *
@@ -182,9 +174,7 @@ bool p256_keygen(uint32_t public_key_x[8], uint32_t public_key_y[8],
 bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t private_key[8],
                                   const uint32_t others_public_key_x[8], const uint32_t others_public_key_y[8])
                                   __attribute__((warn_unused_result));
-#endif
 
-#if include_p256_raw_scalarmult_base
 /**
  * Raw scalar multiplication by the base point of the elliptic curve.
  *
@@ -194,9 +184,7 @@ bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t priv
  * elliptic curve, and returns true only if this validation succeeds. Otherwise false is returned.
  */
 bool p256_scalarmult_base(uint32_t result_x[8], uint32_t result_y[8], const uint32_t scalar[8]);
-#endif
 
-#if include_p256_raw_scalarmult_generic
 /**
  * Raw scalar multiplication by any point on the elliptic curve.
  *
@@ -208,7 +196,6 @@ bool p256_scalarmult_base(uint32_t result_x[8], uint32_t result_y[8], const uint
  */
 bool p256_scalarmult_generic(uint32_t result_x[8], uint32_t result_y[8],
 						     const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]);
-#endif
 
 // These functions create a big endian octet string representation of a point according to the X.92 standard.
 
@@ -227,7 +214,6 @@ void p256_point_to_octet_string_compressed(uint8_t out[33], const uint32_t x[8],
  */
 void p256_point_to_octet_string_hybrid(uint8_t out[65], const uint32_t x[8], const uint32_t y[8]);
 
-#if include_p256_decode_point || include_p256_decompress_point
 /**
  * Decodes a point according to the three encodings above.
  *
@@ -243,6 +229,3 @@ void p256_point_to_octet_string_hybrid(uint8_t out[65], const uint32_t x[8], con
 bool p256_octet_string_to_point(uint32_t x[8], uint32_t y[8],
                                 const uint8_t* input, uint32_t input_len_in_bytes)
                                 __attribute__((warn_unused_result));
-#endif
-
-#endif
