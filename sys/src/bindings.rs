@@ -147,29 +147,6 @@ pub type __pid_t = cty::c_int;
 pub struct __fsid_t {
     pub __val: [cty::c_int; 2usize],
 }
-#[test]
-fn bindgen_test_layout___fsid_t() {
-    assert_eq!(
-        ::core::mem::size_of::<__fsid_t>(),
-        8usize,
-        concat!("Size of: ", stringify!(__fsid_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<__fsid_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(__fsid_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<__fsid_t>())).__val as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__fsid_t),
-            "::",
-            stringify!(__val)
-        )
-    );
-}
 pub type __clock_t = cty::c_long;
 pub type __rlim_t = cty::c_ulong;
 pub type __rlim64_t = __uint64_t;
@@ -223,43 +200,6 @@ pub type wchar_t = cty::c_uint;
 pub struct max_align_t {
     pub __clang_max_align_nonce1: cty::c_longlong,
     pub __clang_max_align_nonce2: f64,
-}
-#[test]
-fn bindgen_test_layout_max_align_t() {
-    assert_eq!(
-        ::core::mem::size_of::<max_align_t>(),
-        16usize,
-        concat!("Size of: ", stringify!(max_align_t))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<max_align_t>(),
-        8usize,
-        concat!("Alignment of ", stringify!(max_align_t))
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<max_align_t>())).__clang_max_align_nonce1 as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(max_align_t),
-            "::",
-            stringify!(__clang_max_align_nonce1)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::core::ptr::null::<max_align_t>())).__clang_max_align_nonce2 as *const _ as usize
-        },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(max_align_t),
-            "::",
-            stringify!(__clang_max_align_nonce2)
-        )
-    );
 }
 extern "C" {
     #[doc = " Converts endianness by reversing the input value."]
@@ -315,39 +255,6 @@ extern "C" {
 pub struct SignPrecomp {
     pub r: [u32; 8usize],
     pub k_inv: [u32; 8usize],
-}
-#[test]
-fn bindgen_test_layout_SignPrecomp() {
-    assert_eq!(
-        ::core::mem::size_of::<SignPrecomp>(),
-        64usize,
-        concat!("Size of: ", stringify!(SignPrecomp))
-    );
-    assert_eq!(
-        ::core::mem::align_of::<SignPrecomp>(),
-        4usize,
-        concat!("Alignment of ", stringify!(SignPrecomp))
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SignPrecomp>())).r as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SignPrecomp),
-            "::",
-            stringify!(r)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::core::ptr::null::<SignPrecomp>())).k_inv as *const _ as usize },
-        32usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(SignPrecomp),
-            "::",
-            stringify!(k_inv)
-        )
-    );
 }
 extern "C" {
     #[doc = " Creates an ECDSA signature, using a two-step procedure."]
