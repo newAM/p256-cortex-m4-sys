@@ -37,9 +37,8 @@ extern "C" {
 
 /// Converts endianness by reversing the input value.
 ///
-/// The output and input pointers may refer to the same location
+/// The output and input pointers may NOT refer to the same location
 /// and have no alignment requirements.
-// TODO: is the above about same location correct?  Rust alias and all.
 #[no_mangle]
 pub unsafe extern "C" fn p256_convert_endianness(
     output: *mut c_void,
