@@ -202,16 +202,6 @@ pub struct max_align_t {
     pub __clang_max_align_nonce2: f64,
 }
 extern "C" {
-    #[doc = " Converts endianness by reversing the input value."]
-    #[doc = ""]
-    #[doc = " The output and input pointers may refer to the same location and have no alignment requirements."]
-    pub fn p256_convert_endianness(
-        output: *mut cty::c_void,
-        input: *const cty::c_void,
-        byte_len: size_t,
-    );
-}
-extern "C" {
     #[doc = " Verifies an ECDSA signature."]
     #[doc = ""]
     #[doc = " Returns true if the signature is valid for the given input, otherwise false."]

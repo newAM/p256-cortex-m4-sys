@@ -426,14 +426,6 @@ static void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mon
 #endif
 #endif
 
-void p256_convert_endianness(void* output, const void* input, size_t byte_len) {
-    for (size_t i = 0; i < byte_len / 2; i++) {
-        uint8_t t = ((uint8_t*)input)[byte_len - 1 - i];
-        ((uint8_t*)output)[byte_len - 1 - i] = ((uint8_t*)input)[i];
-        ((uint8_t*)output)[i] = t;
-    }
-}
-
 #if include_p256_verify
 bool p256_verify(const uint32_t public_key_x[8], const uint32_t public_key_y[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t r[8], const uint32_t s[8]) {
     if (!P256_check_range_n(r) || !P256_check_range_n(s)) {
