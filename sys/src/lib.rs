@@ -17,10 +17,17 @@ use core::arch::global_asm;
 global_asm!(include_str!("./asm.s"));
 
 extern "C" {
-    /// Checks that the argument, as little-endian integer, is a reduced non-zero
-    /// element of the scalar field.
+    /// Checks that the argument, as little-endian integer,
+    /// is a reduced non-zero element of the scalar field.
     ///
     /// In other words, that it is in the range `1..=n-1`,
     /// where `n = 2^256 - 2^224 + 2^192 - 0x4319055258e8617b0c46353d039cdaaf`.
     pub fn P256_check_range_n(a: *const u32) -> bool;
+
+    /// Checks that the argument, as little-endian integer,
+    /// is a reduced element of the base field.
+    ///
+    /// In other words, that it is in the range `0..=p-1`,
+    /// where `p = 2^256 - 2^224 + 2^192 + 2^96 - 1`.
+    pub fn P256_check_range_p(a: *const u32) -> bool;
 }

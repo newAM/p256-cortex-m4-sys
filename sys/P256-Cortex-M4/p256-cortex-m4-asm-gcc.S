@@ -1597,34 +1597,7 @@ P256_from_montgomery:
 #endif
 
 #if include_p256_verify || include_p256_varmult || include_p256_decompress_point || include_p256_decode_point
-// Checks whether the input number is within [0,p-1]
-// in: *r0
-// out: r0 = 1 if ok, else 0
-	.type P256_check_range_p, %function
-P256_check_range_p:
-	.global P256_check_range_p
-	push {r4-r8,lr}
-	//frame push {r4-r8,lr}
-	
-	ldm r0,{r1-r8}
-	
-	movs r0,#0xffffffff
-	
-	subs r1,r0
-	sbcs r2,r2,r0
-	sbcs r3,r3,r0
-	sbcs r4,r4,#0
-	sbcs r5,r5,#0
-	sbcs r6,r6,#0
-	sbcs r7,r7,#1
-	sbcs r8,r8,r0
-	
-	sbcs r0,r0,r0
-	lsrs r0,#31
-	
-	pop {r4-r8,pc}
-	
-	.size P256_check_range_p, .-P256_check_range_p
+
 #endif
 
 
