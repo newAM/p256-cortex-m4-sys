@@ -1633,7 +1633,7 @@ P256_check_range_p:
 
 #if include_p256_verify || include_p256_sign
 	.align 2
-P256_order_mu:
+P256_old_order_mu:
 	.word 0xeedf9bfe
 	.word 0x012ffd85
 	.word 0xdf1a6c21
@@ -1653,7 +1653,7 @@ P256_reduce_mod_n_once:
 	push {lr}
 	//frame push {lr}
 	
-	adr r10,P256_order
+	adr r10,P256_old_order
 	ldm r10,{r10,r11,r12,lr}
 	subs r0,r10
 	sbcs r1,r1,r11
@@ -1697,12 +1697,12 @@ P256_reduce_mod_n_64bytes:
 	
 	add r0,sp,#36
 	adds r1,r1,#28
-	adr r2,P256_order_mu
+	adr r2,P256_old_order_mu
 	bl mul288x288
 	
 	mov r0,sp
 	add r1,sp,#72
-	adr r2,P256_order
+	adr r2,P256_old_order
 	bl mul288x288
 	
 	ldm r10,{r0-r8}
@@ -2074,10 +2074,10 @@ P256_matrix_mul_mod_n:
 	
 	lsrs lr,r4,#31
 	mov r12,#0
-	ldrd r10,r11,P256_order_local
+	ldrd r10,r11,P256_old_order_local
 	umaal r1,r12,lr,r10
 	umaal r2,r12,lr,r11
-	ldrd r10,r11,P256_order_local+8
+	ldrd r10,r11,P256_old_order_local+8
 	umaal r3,r12,lr,r10
 	umaal r5,r12,lr,r11
 	umaal r6,r12,lr,r4
@@ -2123,11 +2123,11 @@ P256_matrix_mul_mod_n:
 	ldr r0,=0xee00bc4f // montgomery multiplication factor N' (when R = 2^32), N*N' = -1 mod R
 	mul r0,r10,r0 // m = ((T mod R)N') mod R
 	movs r6,#0				// need 4-byte alignment on next instruction
-	ldrd r8,r9,P256_order_local
+	ldrd r8,r9,P256_old_order_local
 	umaal r10,r6,r0,r8 // t = (T + mN) / R
 	umaal r11,r6,r0,r9
 	subs r11,r11,r8 // conditionally subtract by N unless we later find out the result becomes negative
-	ldrd r8,r10,P256_order_local+8
+	ldrd r8,r10,P256_old_order_local+8
 	umaal r1,r6,r0,r8
 	sbcs r1,r1,r9
 	umaal r2,r6,r0,r10
@@ -2147,7 +2147,7 @@ P256_matrix_mul_mod_n:
 	sbcs r6,r6,r7 // if the result becomes negative, r6 becomes -1
 	
 	// conditionally add back N
-	ldrd r0,r9,P256_order_local
+	ldrd r0,r9,P256_old_order_local
 	lsrs r6,r6,#31
 	umaal r7,r11,r6,r0
 	umaal r1,r11,r6,r9
@@ -2174,7 +2174,7 @@ P256_matrix_mul_mod_n:
 // *r1=x1
 	.type mod_inv_vartime_inner_n, %function
 mod_inv_vartime_inner_n:
-	adr r11,P256_order
+	adr r11,P256_old_order
 	ldm r0,{r2-r9}
 	cmp r2,#1
 	bne 1f
@@ -2266,7 +2266,7 @@ P256_mod_n_inv_vartime:
 	stm r0,{r1-r8}
 	add r0,sp,#96
 	stm r0,{r2-r9}
-	adr r2,P256_order
+	adr r2,P256_old_order
 	ldm r2,{r2-r9}
 	add r0,sp,#64
 	stm r0,{r2-r9}
@@ -2321,7 +2321,7 @@ P256_mod_n_inv_vartime:
 	sbcs r9,r9,lr
 	
 	sbcs r10,r10,r10
-	adr r11,P256_order
+	adr r11,P256_old_order
 	ldm r11,{r2,r11,r12,lr}
 	and r2,r10
 	and r11,r10
@@ -2368,10 +2368,10 @@ P256_mod_n_inv_vartime:
 #endif
 
 	.align 2
-P256_order_local: // (arm clang assembler is broken for ldrd global labels defined in the same file)
-	.type P256_order, %object
-P256_order:
-	.global P256_order
+P256_old_order_local: // (arm clang assembler is broken for ldrd global labels defined in the same file)
+	.type P256_old_order, %object
+P256_old_order:
+	.global P256_old_order
 	.word 0xFC632551
 	.word 0xF3B9CAC2
 	.word 0xA7179E84
@@ -2381,7 +2381,7 @@ P256_order:
 	.word 0
 	.word 0xFFFFFFFF
 	.word 0
-	.size P256_order, .-P256_order
+	.size P256_old_order, .-P256_old_order
 
 // Elliptic curve operations on the NIST curve P-256
 
@@ -3158,7 +3158,7 @@ P256_verify_last_step:
 	beq 1f
 	
 	// The check may fail if r < p-n, so also check for r' = r+n
-	adr r0,P256_order
+	adr r0,P256_old_order
 	ldm r0,{r8-r11}
 	ldr r0,[sp,#64]
 	cbz r0,0f // if we already tried once, abort
@@ -3236,7 +3236,7 @@ P256_negate_mod_m_if:
 	.type P256_negate_mod_n_if, %function
 P256_negate_mod_n_if:
 	.global P256_negate_mod_n_if
-	ldr r3,=P256_order
+	ldr r3,=P256_old_order
 	b P256_negate_mod_m_if
 	.size P256_negate_mod_n_if, .-P256_negate_mod_n_if
 
