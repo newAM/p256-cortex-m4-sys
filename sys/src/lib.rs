@@ -78,6 +78,19 @@ extern "C" {
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
 
+// Constant time abs
+// but not really abs, only works for +/-15
+#[inline(always)]
+fn abs_int(a: i8) -> u32 {
+    let a_u: u32 = a as i32 as u32;
+    let mut mask: u32 = a_u >> 31;
+    mask |= mask << 1;
+    mask |= mask << 2;
+    let mut result: u32 = ((-a) as u32) & mask;
+    result |= (a as u32) & (mask ^ 0xF);
+    result
+}
+
 /// Converts endianness by reversing the input value.
 ///
 /// The output and input pointers may NOT refer to the same location
@@ -243,8 +256,6 @@ unsafe extern "C" fn scalarmult_variable_base(
         table[0].as_ptr() as *const *const u32,
     );
     (1..8).for_each(|i| {
-        // TODO: is this eqivalent to this?
-        // memcpy(table[i], table[7], 96);
         table.copy_within(7..8, i);
         P256_add_sub_j(
             table[i].as_mut_ptr() as *mut *mut u32,
@@ -270,8 +281,7 @@ unsafe extern "C" fn scalarmult_variable_base(
         });
 
         let mut selected_point: [[u32; 8]; 3] = [[0; 8]; 3];
-        // TODO: this needs to be a constant-time abs_diff, see the original C
-        selected_point.copy_from_slice(&table[usize::from(e[i].abs_diff(0) >> 1)]);
+        selected_point.copy_from_slice(&table[(abs_int(e[i]) >> 1) as usize]);
         P256_negate_mod_p_if(
             selected_point[1].as_mut_ptr(),
             selected_point[1].as_ptr(),
