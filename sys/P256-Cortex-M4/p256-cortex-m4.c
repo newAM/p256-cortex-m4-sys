@@ -541,31 +541,6 @@ bool p256_keygen(uint32_t public_key_x[8], uint32_t public_key_y[8], const uint3
     return p256_scalarmult_base(public_key_x, public_key_y, private_key);
 }
 
-static bool p256_scalarmult_generic_no_scalar_check(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]) {
-    if (!P256_check_range_p(in_x) || !P256_check_range_p(in_y)) {
-        return false;
-    }
-    
-    P256_to_montgomery(output_mont_x, in_x);
-    P256_to_montgomery(output_mont_y, in_y);
-    
-    if (!P256_point_is_on_curve(output_mont_x, output_mont_y)) {
-        return false;
-    }
-    
-    scalarmult_variable_base(output_mont_x, output_mont_y, output_mont_x, output_mont_y, scalar);
-    return true;
-}
-
-bool p256_scalarmult_generic(uint32_t result_x[8], uint32_t result_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]) {
-    if (!P256_check_range_n(scalar) || !p256_scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)) {
-        return false;
-    }
-    P256_from_montgomery(result_x, result_x);
-    P256_from_montgomery(result_y, result_y);
-    return true;
-}
-
 bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t private_key[8], const uint32_t others_public_key_x[8], const uint32_t others_public_key_y[8]) {
     uint32_t result_x[8], result_y[8];
     if (!p256_scalarmult_generic_no_scalar_check(result_x, result_y, private_key, others_public_key_x, others_public_key_y)) {

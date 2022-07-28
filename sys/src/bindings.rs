@@ -340,19 +340,3 @@ extern "C" {
     pub fn p256_scalarmult_base(result_x: *mut u32, result_y: *mut u32, scalar: *const u32)
         -> bool;
 }
-extern "C" {
-    #[doc = " Raw scalar multiplication by any point on the elliptic curve."]
-    #[doc = ""]
-    #[doc = " This function can be used to implement custom algorithms using the P-256 curve."]
-    #[doc = ""]
-    #[doc = " This function validates all inputs and proceeds only if the scalar is within the range 1 to n-1, where n"]
-    #[doc = " is the order of the elliptic curve, and the input point's coordinates are each less than the order of"]
-    #[doc = " the prime field. If validation succeeds, true is returned. Otherwise false is returned."]
-    pub fn p256_scalarmult_generic(
-        result_x: *mut u32,
-        result_y: *mut u32,
-        scalar: *const u32,
-        in_x: *const u32,
-        in_y: *const u32,
-    ) -> bool;
-}

@@ -16,6 +16,74 @@ const CYC_PER_MICRO: u32 = FREQ / 1000 / 1000;
 // WARNING will wrap-around eventually, use this for relative timing only
 defmt::timestamp!("{=u32:us}", DWT::cycle_count() / CYC_PER_MICRO);
 
+// Message hash
+const HASH: [u32; 8] = [
+    0x44acf6b7, 0xe36c1342, 0xc2c58972, 0x04fe0950, 0x4e1e2efb, 0x1a900377, 0xdbc4e7a6, 0xa133ec56,
+];
+
+const PRIVATE_KEY: [u32; 8] = [
+    0x519b423d, 0x715f8b58, 0x1f4fa8ee, 0x59f4771a, 0x5b44c813, 0x0b4e3eac, 0xca54a56d, 0xda72b464,
+];
+
+// Note: in real-world use this should be a one-time random number (nonce).
+// This fixed value is for testing purposes only.
+const INTEGER: [u32; 8] = [
+    0x94a1bbb1, 0x4b906a61, 0xa280f245, 0xf9e93c7f, 0x3b4a6247, 0x824f5d33, 0xb9670787, 0x642a68de,
+];
+
+const R_SIGN: [u32; 8] = [
+    0xf3ac8061, 0xb514795b, 0x8843e3d6, 0x629527ed, 0x2afd6b1f, 0x6a555a7a, 0xcabb5e6f, 0x79c8c2ac,
+];
+const S_SIGN: [u32; 8] = [
+    0x8bf77819, 0xca05a6b2, 0x786c7626, 0x2bf7371c, 0xef97b218, 0xe96f175a, 0x3ccdda2a, 0xcc058903,
+];
+
+const CURVE_PT_X: [u32; 8] = [
+    0x1ccbe91c, 0x075fc7f4, 0xf033bfa2, 0x48db8fcc, 0xd3565de9, 0x4bbfb12f, 0x3c59ff46, 0xc271bf83,
+];
+
+const CURVE_PT_Y: [u32; 8] = [
+    0xce4014c6, 0x8811f9a2, 0x1a1fdb2c, 0x0e6113e0, 0x6db7ca93, 0xb7404e78, 0xdc7ccd5c, 0xa89a4ca9,
+];
+
+const fn swap32(i: [u32; 8]) -> [u32; 8] {
+    [
+        i[0].swap_bytes(),
+        i[1].swap_bytes(),
+        i[2].swap_bytes(),
+        i[3].swap_bytes(),
+        i[4].swap_bytes(),
+        i[5].swap_bytes(),
+        i[6].swap_bytes(),
+        i[7].swap_bytes(),
+    ]
+}
+
+fn into_bytes(i: [u32; 8]) -> [u8; 32] {
+    unsafe { core::mem::transmute::<[u32; 8], [u8; 32]>(i) }
+}
+
+// for use with rust-crypto
+const HASH_SWAP: [u32; 8] = swap32(HASH);
+const INTEGER_SWAP: [u32; 8] = swap32(INTEGER);
+const PRIVATE_KEY_SWAP: [u32; 8] = swap32(PRIVATE_KEY);
+const R_SIGN_SWAP: [u32; 8] = swap32(R_SIGN);
+const S_SIGN_SWAP: [u32; 8] = swap32(S_SIGN);
+const CURVE_PT_X_SWAP: [u32; 8] = swap32(CURVE_PT_X);
+const CURVE_PT_Y_SWAP: [u32; 8] = swap32(CURVE_PT_Y);
+
+fn convert(i: [u32; 8]) -> [u32; 8] {
+    let mut ret = core::mem::MaybeUninit::<[u32; 8]>::uninit();
+    unsafe {
+        p256_cortex_m4_sys::p256_convert_endianness(
+            ret.as_mut_ptr() as *mut _,
+            i.as_ptr() as *const _,
+            32,
+        );
+        ret.assume_init()
+    }
+}
+
 #[defmt_test::tests]
 mod tests {
     use super::*;
@@ -161,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn p256_point_to_octet_string_hybrid() {
+    fn point_to_octet_string_hybrid() {
         use p256_cortex_m4_sys::p256_point_to_octet_string_hybrid;
 
         let mut out: [u8; 65] = [0; 65];
@@ -216,5 +284,86 @@ mod tests {
                 0xABB2B225
             ]
         );
+    }
+
+    // #[test]
+    // fn verify() {
+    //     use p256_cortex_m4_sys::{p256_octet_string_to_point, p256_verify};
+
+    //     let mut key: [u8; 65] = [0; 65];
+    //     key[0] = 0x04;
+    //     key[1..33].copy_from_slice(&into_bytes(CURVE_PT_X_SWAP));
+    //     key[33..65].copy_from_slice(&into_bytes(CURVE_PT_Y_SWAP));
+
+    //     let mut x: [u32; 8] = [0; 8];
+    //     let mut y: [u32; 8] = [0; 8];
+
+    //     let is_ok: bool = unsafe {
+    //         p256_octet_string_to_point(
+    //             x.as_mut_ptr(),
+    //             y.as_mut_ptr(),
+    //             key.as_ptr(),
+    //             key.len() as u32,
+    //         )
+    //     };
+    //     assert!(is_ok, "p256_octet_string_to_point");
+
+    //     let authentic: bool = unsafe {
+    //         p256_verify(
+    //             x.as_ptr(),
+    //             y.as_ptr(),
+    //             HASH_SWAP.as_ptr() as *const u8,
+    //             32,
+    //             R_SIGN_SWAP.as_ptr(),
+    //             S_SIGN_SWAP.as_ptr(),
+    //         )
+    //     };
+    //     defmt::assert!(authentic);
+    // }
+
+    #[test]
+    fn p256_sign() {
+        use p256_cortex_m4_sys::{p256_convert_endianness, p256_sign, P256_check_range_n};
+
+        let mut private_key: [u32; 8] = [0; 8];
+        unsafe {
+            p256_convert_endianness(
+                private_key.as_mut_ptr() as *mut _,
+                into_bytes(PRIVATE_KEY_SWAP).as_ptr() as *const _,
+                32,
+            )
+        };
+        defmt::assert!(unsafe { P256_check_range_n(private_key.as_ptr()) });
+
+        let mut integer: [u32; 8] = [0; 8];
+        unsafe {
+            p256_convert_endianness(
+                integer.as_mut_ptr() as *mut _,
+                into_bytes(INTEGER_SWAP).as_ptr() as *const _,
+                32,
+            )
+        };
+
+        let mut r_sign: [u32; 8] = [0; 8];
+        let mut s_sign: [u32; 8] = [0; 8];
+
+        let is_ok: bool = unsafe {
+            p256_sign(
+                r_sign.as_mut_ptr(),
+                s_sign.as_mut_ptr(),
+                HASH_SWAP.as_ptr() as *const u8,
+                32,
+                private_key.as_ptr(),
+                integer.as_ptr(),
+            )
+        };
+
+        defmt::assert!(is_ok, "An error occured");
+        defmt::println!("r_sign={:08X}", r_sign);
+        defmt::println!("R_SIGN_SWAP={:08X}", R_SIGN_SWAP);
+        defmt::println!("s_sign={:08X}", r_sign);
+        defmt::println!("S_SIGN_SWAP={:08X}", S_SIGN_SWAP);
+        defmt::assert_eq!(convert(r_sign), R_SIGN_SWAP);
+        defmt::assert_eq!(convert(s_sign), S_SIGN_SWAP);
     }
 }

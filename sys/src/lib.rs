@@ -21,6 +21,7 @@ extern "C" {
     // void P256_to_montgomery(uint32_t aR[8], const uint32_t a[8]);
     fn P256_to_montgomery(aR: *mut u32, a: *const u32);
     // void P256_from_montgomery(uint32_t a[8], const uint32_t aR[8]);
+    fn P256_from_montgomery(a: *mut u32, aR: *const u32);
     // bool P256_check_range_p(const uint32_t a[8]);
 
     // bool P256_check_range_n(const uint32_t a[8]);
@@ -269,6 +270,7 @@ unsafe extern "C" fn scalarmult_variable_base(
         });
 
         let mut selected_point: [[u32; 8]; 3] = [[0; 8]; 3];
+        // TODO: this needs to be a constant-time abs_diff, see the original C
         selected_point.copy_from_slice(&table[usize::from(e[i].abs_diff(0) >> 1)]);
         P256_negate_mod_p_if(
             selected_point[1].as_mut_ptr(),
@@ -299,4 +301,62 @@ unsafe extern "C" fn scalarmult_variable_base(
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
     P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_ptr(), even);
+}
+
+#[no_mangle]
+unsafe extern "C" fn p256_scalarmult_generic_no_scalar_check(
+    output_mont_x: *mut u32,
+    output_mont_y: *mut u32,
+    scalar: *const u32,
+    in_x: *const u32,
+    in_y: *const u32,
+) -> bool {
+    // uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]
+
+    if !P256_check_range_p(in_x) || !P256_check_range_p(in_y) {
+        false
+    } else {
+        P256_to_montgomery(output_mont_x, in_x);
+        P256_to_montgomery(output_mont_y, in_y);
+
+        if !P256_point_is_on_curve(output_mont_x, output_mont_y) {
+            false
+        } else {
+            scalarmult_variable_base(
+                output_mont_x,
+                output_mont_y,
+                output_mont_x,
+                output_mont_y,
+                scalar,
+            );
+            true
+        }
+    }
+}
+
+/// Raw scalar multiplication by any point on the elliptic curve.
+///
+/// This function can be used to implement custom algorithms using the P-256 curve.
+///
+/// This function validates all inputs and proceeds only if the scalar is within the range 1 to n-1, where n
+/// is the order of the elliptic curve, and the input point's coordinates are each less than the order of
+/// the prime field. If validation succeeds, true is returned. Otherwise false is returned.
+#[no_mangle]
+pub unsafe extern "C" fn p256_scalarmult_generic(
+    result_x: *mut u32,
+    result_y: *mut u32,
+    scalar: *const u32,
+    in_x: *const u32,
+    in_y: *const u32,
+) -> bool {
+    // uint32_t result_x[8], uint32_t result_y[8], const uint32_t scalar[8], const uint32_t in_x[8], const uint32_t in_y[8]
+    if !P256_check_range_n(scalar)
+        || !p256_scalarmult_generic_no_scalar_check(result_x, result_y, scalar, in_x, in_y)
+    {
+        false
+    } else {
+        P256_from_montgomery(result_x, result_x);
+        P256_from_montgomery(result_y, result_y);
+        true
+    }
 }
