@@ -268,16 +268,13 @@ unsafe extern "C" fn scalarmult_variable_base(
 
     // Based on https://eprint.iacr.org/2014/130.pdf, Algorithm 1.
 
-    let output_mont_x: &mut [u32] = slice::from_raw_parts_mut(output_mont_x, 8);
-    let output_mont_y: &mut [u32] = slice::from_raw_parts_mut(output_mont_y, 8);
     let input_mont_x: &[u32] = slice::from_raw_parts(input_mont_x, 8);
     let input_mont_y: &[u32] = slice::from_raw_parts(input_mont_y, 8);
-    let scalar: &[u32] = slice::from_raw_parts(scalar, 8);
 
     // The algorithm used requires the scalar to be odd. If even, negate the scalar modulo p to make it odd, and later negate the end result.
-    let even: u32 = (scalar[0] & 1) ^ 1;
+    let even: u32 = ((*scalar) & 1) ^ 1;
     let mut scalar2: [u32; 8] = [0; 8];
-    P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar.as_ptr(), even);
+    P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar, even);
 
     // Rewrite the scalar as e[0] + 2^4*e[1] + 2^8*e[2] + ... + 2^252*e[63], where each e[i] is an odd number and -15 <= e[i] <= 15.
     let mut e: [i8; 64] = [0; 64];
@@ -350,14 +347,14 @@ unsafe extern "C" fn scalarmult_variable_base(
     }
 
     P256_jacobian_to_affine(
-        output_mont_x.as_mut_ptr(),
-        output_mont_y.as_mut_ptr(),
+        output_mont_x,
+        output_mont_y,
         current_point.as_ptr() as *const *mut u32,
     );
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
-    P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_ptr(), even);
+    P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
 }
 
 #[no_mangle]
