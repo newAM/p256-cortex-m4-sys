@@ -534,9 +534,4 @@ bool p256_scalarmult_base(uint32_t result_x[8], uint32_t result_y[8], const uint
     P256_from_montgomery(result_x, result_x);
     P256_from_montgomery(result_y, result_y);
     return true;
-    
-}
-
-bool p256_keygen(uint32_t public_key_x[8], uint32_t public_key_y[8], const uint32_t private_key[8]) {
-    return p256_scalarmult_base(public_key_x, public_key_y, private_key);
 }
