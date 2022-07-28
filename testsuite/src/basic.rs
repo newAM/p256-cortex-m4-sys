@@ -286,43 +286,43 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn verify() {
-    //     use p256_cortex_m4_sys::{p256_octet_string_to_point, p256_verify};
+    #[test]
+    fn verify() {
+        use p256_cortex_m4_sys::{p256_octet_string_to_point, p256_verify};
 
-    //     let mut key: [u8; 65] = [0; 65];
-    //     key[0] = 0x04;
-    //     key[1..33].copy_from_slice(&into_bytes(CURVE_PT_X_SWAP));
-    //     key[33..65].copy_from_slice(&into_bytes(CURVE_PT_Y_SWAP));
+        let mut key: [u8; 65] = [0; 65];
+        key[0] = 0x04;
+        key[1..33].copy_from_slice(&into_bytes(CURVE_PT_X_SWAP));
+        key[33..65].copy_from_slice(&into_bytes(CURVE_PT_Y_SWAP));
 
-    //     let mut x: [u32; 8] = [0; 8];
-    //     let mut y: [u32; 8] = [0; 8];
+        let mut x: [u32; 8] = [0; 8];
+        let mut y: [u32; 8] = [0; 8];
 
-    //     let is_ok: bool = unsafe {
-    //         p256_octet_string_to_point(
-    //             x.as_mut_ptr(),
-    //             y.as_mut_ptr(),
-    //             key.as_ptr(),
-    //             key.len() as u32,
-    //         )
-    //     };
-    //     assert!(is_ok, "p256_octet_string_to_point");
+        let is_ok: bool = unsafe {
+            p256_octet_string_to_point(
+                x.as_mut_ptr(),
+                y.as_mut_ptr(),
+                key.as_ptr(),
+                key.len() as u32,
+            )
+        };
+        assert!(is_ok, "p256_octet_string_to_point");
 
-    //     let authentic: bool = unsafe {
-    //         p256_verify(
-    //             x.as_ptr(),
-    //             y.as_ptr(),
-    //             HASH_SWAP.as_ptr() as *const u8,
-    //             32,
-    //             R_SIGN_SWAP.as_ptr(),
-    //             S_SIGN_SWAP.as_ptr(),
-    //         )
-    //     };
-    //     defmt::assert!(authentic);
-    // }
+        let authentic: bool = unsafe {
+            p256_verify(
+                x.as_ptr(),
+                y.as_ptr(),
+                HASH_SWAP.as_ptr() as *const u8,
+                32,
+                convert(R_SIGN_SWAP).as_ptr(),
+                convert(S_SIGN_SWAP).as_ptr(),
+            )
+        };
+        defmt::assert!(authentic);
+    }
 
     #[test]
-    fn p256_sign() {
+    fn sign() {
         use p256_cortex_m4_sys::{p256_convert_endianness, p256_sign, P256_check_range_n};
 
         let mut private_key: [u32; 8] = [0; 8];
