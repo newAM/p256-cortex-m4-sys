@@ -22,9 +22,7 @@ extern "C" {
     fn P256_to_montgomery(aR: *mut u32, a: *const u32);
     // void P256_from_montgomery(uint32_t a[8], const uint32_t aR[8]);
     fn P256_from_montgomery(a: *mut u32, aR: *const u32);
-    // bool P256_check_range_p(const uint32_t a[8]);
 
-    // bool P256_check_range_n(const uint32_t a[8]);
     // void P256_mul_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     // void P256_add_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     // void P256_mod_n_inv_vartime(uint32_t res[8], const uint32_t a[8]);
