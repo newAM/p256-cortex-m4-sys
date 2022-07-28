@@ -540,13 +540,3 @@ bool p256_scalarmult_base(uint32_t result_x[8], uint32_t result_y[8], const uint
 bool p256_keygen(uint32_t public_key_x[8], uint32_t public_key_y[8], const uint32_t private_key[8]) {
     return p256_scalarmult_base(public_key_x, public_key_y, private_key);
 }
-
-bool p256_ecdh_calc_shared_secret(uint8_t shared_secret[32], const uint32_t private_key[8], const uint32_t others_public_key_x[8], const uint32_t others_public_key_y[8]) {
-    uint32_t result_x[8], result_y[8];
-    if (!p256_scalarmult_generic_no_scalar_check(result_x, result_y, private_key, others_public_key_x, others_public_key_y)) {
-        return false;
-    }
-    P256_from_montgomery(result_x, result_x);
-    p256_convert_endianness(shared_secret, result_x, 32);
-    return true;
-}

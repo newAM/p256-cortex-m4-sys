@@ -314,23 +314,6 @@ extern "C" {
     ) -> bool;
 }
 extern "C" {
-    #[doc = " Generates the shared secret according to the ECDH standard."]
-    #[doc = ""]
-    #[doc = " The shared secret parameter will contain the big endian encoding for the x coordinate of the scalar"]
-    #[doc = " multiplication of the private key and the input point (other's public key), if the function succeeds."]
-    #[doc = ""]
-    #[doc = " If the other's public key point does not lie on the curve, this function fails and false is returned."]
-    #[doc = " Otherwise, shared secret is calculated and true is returned."]
-    #[doc = ""]
-    #[doc = " NOTE: The return value MUST be checked since the other's public key point cannot generally be trusted."]
-    pub fn p256_ecdh_calc_shared_secret(
-        shared_secret: *mut u8,
-        private_key: *const u32,
-        others_public_key_x: *const u32,
-        others_public_key_y: *const u32,
-    ) -> bool;
-}
-extern "C" {
     #[doc = " Raw scalar multiplication by the base point of the elliptic curve."]
     #[doc = ""]
     #[doc = " This function can be used to implement custom algorithms using the P-256 curve."]

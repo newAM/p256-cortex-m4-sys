@@ -370,3 +370,37 @@ pub unsafe extern "C" fn p256_scalarmult_generic(
         true
     }
 }
+
+/// Generates the shared secret according to the ECDH standard.
+///
+/// The shared secret parameter will contain the big endian encoding for the x coordinate of the scalar
+/// multiplication of the private key and the input point (other's public key), if the function succeeds.
+///
+/// If the other's public key point does not lie on the curve, this function fails and false is returned.
+/// Otherwise, shared secret is calculated and true is returned.
+///
+/// NOTE: The return value MUST be checked since the other's public key point cannot generally be trusted.
+#[no_mangle]
+pub unsafe extern "C" fn p256_ecdh_calc_shared_secret(
+    shared_secret: *mut u8,
+    private_key: *const u32,
+    others_public_key_x: *const u32,
+    others_public_key_y: *const u32,
+) -> bool {
+    // uint8_t shared_secret[32], const uint32_t private_key[8], const uint32_t others_public_key_x[8], const uint32_t others_public_key_y[8]
+    let mut result_x: [u32; 8] = [0; 8];
+    let mut result_y: [u32; 8] = [0; 8];
+    if !p256_scalarmult_generic_no_scalar_check(
+        result_x.as_mut_ptr(),
+        result_y.as_mut_ptr(),
+        private_key,
+        others_public_key_x,
+        others_public_key_y,
+    ) {
+        false
+    } else {
+        P256_from_montgomery(result_x.as_mut_ptr(), result_x.as_mut_ptr());
+        p256_convert_endianness(shared_secret as *mut _, result_x.as_mut_ptr() as *mut _, 32);
+        true
+    }
+}
