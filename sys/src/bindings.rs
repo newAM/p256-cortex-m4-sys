@@ -294,14 +294,3 @@ extern "C" {
         sign_precomp: *mut SignPrecomp,
     ) -> bool;
 }
-
-extern "C" {
-    #[doc = " Raw scalar multiplication by the base point of the elliptic curve."]
-    #[doc = ""]
-    #[doc = " This function can be used to implement custom algorithms using the P-256 curve."]
-    #[doc = ""]
-    #[doc = " This function validates that the scalar lies in the accepted range 1 to n-1, where n is the order of the"]
-    #[doc = " elliptic curve, and returns true only if this validation succeeds. Otherwise false is returned."]
-    pub fn p256_scalarmult_base(result_x: *mut u32, result_y: *mut u32, scalar: *const u32)
-        -> bool;
-}

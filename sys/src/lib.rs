@@ -36,7 +36,7 @@ extern "C" {
     fn P256_jacobian_to_affine(
         affine_mont_x: *mut u32,
         affine_mont_y: *mut u32,
-        jacobian_mont: *const *const u32,
+        jacobian_mont: *const *mut u32,
     );
     // bool P256_point_is_on_curve(const uint32_t x_mont[8], const uint32_t y_mont[8]);
     fn P256_point_is_on_curve(x_mont: *const u32, y_mont: *const u32) -> bool;
@@ -58,6 +58,10 @@ extern "C" {
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
     // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
+
+    // TODO: remove this, was a C private function
+    // void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8]);
+    fn scalarmult_fixed_base(output_mont_x: *mut u32, output_mont_y: *mut u32, scalar: *const u32);
 }
 
 extern "C" {
@@ -77,6 +81,47 @@ extern "C" {
 }
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
+
+#[rustfmt::skip]
+const P256_BASEPOINT_PRECOMP2: [[[[u32; 8]; 2]; 8]; 2] =
+[
+[
+[[0x670844e0, 0x52d8a7c9, 0xef68a29d, 0xe33bdc, 0x4bdb7361, 0xf3d2848, 0x91c5304d, 0x5222c821],
+[0xdf73fc25, 0xea6d2944, 0x255c81b, 0xa04c0f55, 0xefe488a8, 0x29acdc97, 0x80a560de, 0xbe2e158f]],
+[[0x2b13e673, 0xfc8511ee, 0xd103ed24, 0xffc58dee, 0xea7e99b8, 0x1022523a, 0x4afc8a17, 0x8f43ea39],
+[0xc5f33d0b, 0x8f4e2dbc, 0xd0aa1681, 0x3bc099fa, 0x79ff9df1, 0xffbb7b41, 0xd58b57c4, 0x180de09d]],
+[[0x8bd1cda5, 0x56430752, 0x8e05eda5, 0x1807577f, 0x956896e9, 0x99c699b, 0xf1f0efb5, 0x83d6093d],
+[0xed97061c, 0xef5af17e, 0x30d4c3c, 0x35b977b8, 0x49229439, 0x81fa75a2, 0xa0b6d35d, 0xf5a22070]],
+[[0x74f81cf1, 0x814c5365, 0x120065b, 0xe30baff7, 0x15132621, 0x80ae1256, 0x36a80788, 0x16d2b8cb],
+[0xecc50bca, 0x33d14697, 0x17aedd21, 0x19a9dfb0, 0xedc3f766, 0x523fbcc7, 0xb2cf5afd, 0x9c4de6dd]],
+[[0xcf0d9f6d, 0x5305a9e6, 0x81a9b021, 0x5839172f, 0x75c687cf, 0xcca7a4dd, 0x844be22f, 0x36d59b3e],
+[0x111a53e9, 0xcace7e62, 0xf063f3a1, 0x91c843d4, 0xda812da, 0xbf77e5f0, 0x437f3176, 0xe64af9c]],
+[[0xcf07517d, 0xdbd568bb, 0xba6830b9, 0x2f1afba2, 0xe6c4c2a6, 0x15b6807c, 0xe4966aef, 0x91c7eabc],
+[0xd6b2b6e6, 0x716dea1b, 0x19f85b4b, 0x248c43d1, 0x4a315e2a, 0x16dcfd60, 0xc72b3d0b, 0x15fdd303]],
+[[0x42b7dfd5, 0xe40bf9f4, 0x2d934f2a, 0x673689f3, 0x30a6f50b, 0x8314beb4, 0x976ec64e, 0xd17af2bc],
+[0x1ee7ddf1, 0x39f66c4f, 0x68ea373c, 0x7f68e18b, 0x53d0b186, 0x5166c1f2, 0x7be58f14, 0x95dda601]],
+[[0x42913074, 0xd5ae356, 0x48a542b1, 0x55491b27, 0xb310732a, 0x469ca665, 0x5f1a4cc1, 0x29591d52],
+[0xb84f983f, 0xe76f5b6b, 0x9f5f84e1, 0xbe7eef41, 0x80baa189, 0x1200d496, 0x18ef332c, 0x6376551f]]
+],
+[
+[[0x7c4e54f5, 0xb9e5cbc0, 0xe1410e34, 0xc53a1a17, 0xec454425, 0x3e199130, 0x1700902e, 0xb029c97e],
+[0x786423b6, 0x2de66e11, 0xb41a95be, 0x262dc914, 0x451b683, 0x51766abd, 0x85bb6fb1, 0x55ad5f34]],
+[[0x9066cb79, 0x74f4f1c, 0x30c8b94e, 0x1ab31bd6, 0xd74275b3, 0x6d3f012f, 0x9ddcce40, 0xa214d0b1],
+[0xd165050a, 0x24aedf74, 0xe0e5dc3e, 0x95f17ece, 0xd9224456, 0x6ada9cda, 0x2dd60eea, 0x1fadb2d1]],
+[[0xe20cfb9b, 0xa3d83091, 0xba76e0cb, 0xae79c975, 0xc8858a6e, 0xa5f2a588, 0x874a3168, 0xe897a5f4],
+[0x7d48f096, 0xf6c1ef40, 0xc35b132c, 0x1f9c516b, 0x53c479fd, 0xe1040f91, 0x9df06743, 0x60e881f]],
+[[0x52a90e51, 0x9e0ad72, 0x38c50a96, 0xb7e66ea3, 0x7d997770, 0xab32ad05, 0x445671cb, 0xceaffe2],
+[0x5d37cc99, 0xdfbe753c, 0xe0fea2d5, 0x95d068cc, 0x4dd77cb6, 0x1e37cdda, 0x55530688, 0x88c5a4bb]],
+[[0xc7744f1, 0x3413f033, 0xbc816702, 0x23c05c89, 0x1192b5ac, 0x2322ee9a, 0x373180bb, 0xc1636a0],
+[0xbdde0207, 0xfe2f3d4, 0xc23578d8, 0xe1a093a, 0xc888ead, 0x6e5f0d1, 0x52a2b660, 0x9ca285a5]],
+[[0xce923964, 0xdae76995, 0xa34c7993, 0xcc96493a, 0xea73d9e7, 0xd19b5144, 0x311e6e34, 0x4a5c263],
+[0xd9a2a443, 0x7db5b32b, 0x2cfd960c, 0x3754bd33, 0xa430f15, 0xc5bcc98, 0xd9a94574, 0x5651201f]],
+[[0xfc0418fe, 0xebdd8921, 0x34e20036, 0x37015b39, 0xdf03a353, 0xcf4fcd8f, 0xf12cab16, 0xdc2de6e1],
+[0xd071df14, 0x9c17cc1a, 0x63415530, 0xd7c5e6a3, 0x68f3fb1e, 0xb5301660, 0x18269301, 0xb5f70bc9]],
+[[0x79ec1a0f, 0x2d8daefd, 0xceb39c97, 0x3bbcd6fd, 0x58f61a95, 0xf5575ffc, 0xadf7b420, 0xdbd986c4],
+[0x15f39eb7, 0x81aa8814, 0xb98d976c, 0x6ee2fcf5, 0xcf2f717d, 0x5465475d, 0x6860bbd0, 0x8e24d3c4]]
+]
+];
 
 // Constant time abs
 // but not really abs, only works for +/-15
@@ -305,7 +350,7 @@ unsafe extern "C" fn scalarmult_variable_base(
     P256_jacobian_to_affine(
         output_mont_x.as_mut_ptr(),
         output_mont_y.as_mut_ptr(),
-        current_point.as_ptr() as *const *const u32,
+        current_point.as_ptr() as *const *mut u32,
     );
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
@@ -421,8 +466,144 @@ pub unsafe extern "C" fn p256_ecdh_calc_shared_secret(
 pub unsafe extern "C" fn p256_keygen(
     public_key_x: *mut u32,
     public_key_y: *mut u32,
-    private_key: *mut u32,
+    private_key: *const u32,
 ) -> bool {
     // uint32_t public_key_x[8], uint32_t public_key_y[8], const uint32_t private_key[8]
     p256_scalarmult_base(public_key_x, public_key_y, private_key)
+}
+
+/*
+macro_rules! get_bit {
+    ($arr:ident, $i:expr) => {
+        (($arr[$i / 32] >> ($i % 32)) & 1)
+    };
+}
+
+// scalarmult_variable_base(
+//     output_mont_x,
+//     output_mont_y,
+//     P256_BASEPOINT_PRECOMP2[0][0].as_ptr() as *const u32,
+//     P256_BASEPOINT_PRECOMP2[0][1].as_ptr() as *const u32,
+//     scalar,
+// );
+
+// Calculates scalar*G in constant time
+#[no_mangle]
+unsafe extern "C" fn scalarmult_fixed_base(
+    output_mont_x: *mut u32,
+    output_mont_y: *mut u32,
+    scalar: *const u32,
+) {
+    // u32 output_mont_x[8], u32 output_mont_y[8], const u32 scalar[8]
+
+    let output_mont_x: &mut [u32] = slice::from_raw_parts_mut(output_mont_x, 8);
+    let output_mont_y: &mut [u32] = slice::from_raw_parts_mut(output_mont_y, 8);
+    let scalar: &[u32] = slice::from_raw_parts(scalar, 8);
+
+    // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
+    let even: u32 = (scalar[0] & 1) ^ 1;
+    let mut scalar2: [u32; 8] = [0; 8];
+    P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar.as_ptr(), even);
+
+    // This algorithm conceptually rewrites the odd scalar as s[0] + 2^1*s[1] + 2^2*s[2] + ... + 2^255*s[255], where each s[i] is -1 or 1.
+    // By initially setting s[i] to the corresponding bit S[i] in the original odd scalar S, we go from lsb to msb, and whenever a value s[i] is 0,
+    // increase s[i] by 1 and decrease s[i-1] by 2.
+    // This will result in that s[i] = S[i+1] == 1 ? 1 : -1 for i < 255, and s[255] = 1.
+
+    // We then form the scalars abs(s[j] + s[j+64]*2^64 + s[j+128]*2^128 + s[j+192]*2^192)*(2^32 * floor(j / 32)) for different 0 <= j < 64.
+    // Each scalar times G has already been precomputed in p256_basepoint_precomp2.
+    // That way we only need 31 point doublings and 63 point additions.
+
+    let mut current_point: [[u32; 8]; 3] = [[0; 8]; 3];
+    let mut selected_point: [[u32; 8]; 2] = [[0; 8]; 2];
+
+    let mut i: usize = 32;
+    loop {
+        {
+            let mut mask: u32 = get_bit!(scalar2, i + 32 + 1)
+                | (get_bit!(scalar2, i + 64 + 32 + 1) << 1)
+                | (get_bit!(scalar2, i + 2 * 64 + 32 + 1) << 2);
+            if i == 31 {
+                current_point[..2].copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
+                current_point[2].copy_from_slice(&ONE_MONTGOMERY);
+            } else {
+                P256_double_j(
+                    current_point.as_mut_ptr() as *mut *mut u32,
+                    current_point.as_ptr() as *const *const u32,
+                );
+
+                let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 1).wrapping_sub(1); // positive: 0, negative: -1
+                mask = (mask ^ sign) & 7;
+                selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
+                P256_negate_mod_p_if(
+                    selected_point[1].as_mut_ptr(),
+                    selected_point[1].as_ptr(),
+                    sign & 1,
+                );
+                P256_add_sub_j(
+                    current_point.as_mut_ptr() as *mut *mut u32,
+                    selected_point.as_mut_ptr() as *const *mut u32,
+                    false,
+                    true,
+                );
+            }
+        }
+        {
+            let mut mask: u32 = get_bit!(scalar2, i + 1)
+                | (get_bit!(scalar2, i + 64 + 1) << 1)
+                | (get_bit!(scalar2, i + 2 * 64 + 1) << 2);
+            let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 1).wrapping_sub(1); // positive: 0, negative: -1
+            mask = (mask ^ sign) & 7;
+            selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[0][mask as usize]);
+            P256_negate_mod_p_if(
+                selected_point[1].as_mut_ptr(),
+                selected_point[1].as_ptr(),
+                sign & 1,
+            );
+            P256_add_sub_j(
+                current_point.as_mut_ptr() as *mut *mut u32,
+                selected_point.as_mut_ptr() as *const *mut u32,
+                false,
+                true,
+            );
+        }
+
+        i = match i.checked_sub(1) {
+            Some(i) => i,
+            None => break,
+        }
+    }
+
+    P256_jacobian_to_affine(
+        output_mont_x.as_mut_ptr(),
+        output_mont_y.as_mut_ptr(),
+        current_point.as_ptr() as *const *mut u32,
+    );
+
+    // Negate final result if the scalar was initially even.
+    P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_ptr(), even);
+}
+*/
+
+/// Raw scalar multiplication by the base point of the elliptic curve.
+///
+/// This function can be used to implement custom algorithms using the P-256 curve.
+///
+/// This function validates that the scalar lies in the accepted range 1 to n-1, where n is the order of the
+/// elliptic curve, and returns true only if this validation succeeds. Otherwise false is returned.
+#[no_mangle]
+pub unsafe extern "C" fn p256_scalarmult_base(
+    result_x: *mut u32,
+    result_y: *mut u32,
+    scalar: *const u32,
+) -> bool {
+    // u32 result_x[8], u32 result_y[8], const u32 scalar[8]
+    if !P256_check_range_n(scalar) {
+        false
+    } else {
+        scalarmult_fixed_base(result_x, result_y, scalar);
+        P256_from_montgomery(result_x, result_x);
+        P256_from_montgomery(result_y, result_y);
+        true
+    }
 }

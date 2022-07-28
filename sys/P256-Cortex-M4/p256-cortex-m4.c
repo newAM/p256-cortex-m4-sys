@@ -330,7 +330,7 @@ static void scalarmult_variable_base(uint32_t output_mont_x[8], uint32_t output_
 #define get_bit(arr, i) ((arr[(i) / 32] >> ((i) % 32)) & 1)
 
 // Calculates scalar*G in constant time
-static void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8]) {
+void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8]) {
     uint32_t scalar2[8];
     
     // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
@@ -524,14 +524,4 @@ bool p256_sign(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashl
         return false;
     }
     return p256_sign_step2(r, s, hash, hashlen_in_bytes, private_key, &t);
-}
-
-bool p256_scalarmult_base(uint32_t result_x[8], uint32_t result_y[8], const uint32_t scalar[8]) {
-    if (!P256_check_range_n(scalar)) {
-        return false;
-    }
-    scalarmult_fixed_base(result_x, result_y, scalar);
-    P256_from_montgomery(result_x, result_x);
-    P256_from_montgomery(result_y, result_y);
-    return true;
 }
