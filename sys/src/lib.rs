@@ -314,9 +314,9 @@ unsafe extern "C" fn scalarmult_variable_base(
     // e[63] is never negative
     current_point.copy_from_slice(&table[usize::try_from(e[63] >> 1).unwrap()]);
 
-    let mut i = 63;
-    while i > 0 {
-        (0..3).for_each(|_| {
+    let mut i: usize = 62;
+    loop {
+        (0..4).for_each(|_| {
             P256_double_j(
                 current_point.as_mut_ptr() as *mut *mut u32,
                 current_point.as_ptr() as *const *const u32,
@@ -342,7 +342,11 @@ unsafe extern "C" fn scalarmult_variable_base(
             false,
             false,
         );
-        i -= 1;
+
+        i = match i.checked_sub(1) {
+            Some(i) => i,
+            None => break,
+        }
     }
 
     P256_jacobian_to_affine(
