@@ -21,7 +21,7 @@ jobs:
         with:
           target: thumbv7em-none-eabi
       - run: cargo build --target thumbv7em-none-eabi -p p256-cm4
-      - run: cargo build --target thumbv7em-none-eabi -p testsuite
+      - run: cargo test --target thumbv7em-none-eabi -p testsuite
 
   clippy:
     name: Clippy
