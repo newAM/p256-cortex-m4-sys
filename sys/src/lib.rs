@@ -11,8 +11,11 @@ global_asm!(include_str!("./asm.s"));
 
 extern "C" {
     // int P256_divsteps2_31(int delta, uint32_t f, uint32_t g, uint32_t res_matrix[4]);
+    fn P256_divsteps2_31(delta: i32, f: u32, g: u32, res_matrix: *mut u32) -> i32;
     // void P256_matrix_mul_fg_9(uint32_t a, uint32_t b, const struct FGInteger fg[2], struct FGInteger *res);
+    fn P256_matrix_mul_fg_9(a: u32, b: u32, fg: *const FGInteger, res: *mut FGInteger) -> i32;
     // void P256_matrix_mul_mod_n(uint32_t a, uint32_t b, const struct XYInteger xy[2], struct XYInteger *res);
+    fn P256_matrix_mul_mod_n(a: u32, b: u32, xy: *const XYInteger, res: *mut XYInteger) -> i32;
 
     // void P256_to_montgomery(uint32_t aR[8], const uint32_t a[8]);
     fn P256_to_montgomery(aR: *mut u32, a: *const u32);
@@ -24,7 +27,7 @@ extern "C" {
     // void P256_add_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     fn P256_add_mod_n(res: *mut u32, a: *const u32, b: *const u32);
     // void P256_mod_n_inv_vartime(uint32_t res[8], const uint32_t a[8]);
-    fn P256_mod_n_inv(res: *mut u32, a: *const u32);
+    // fn P256_mod_n_inv(res: *mut u32, a: *const u32);
     // void P256_reduce_mod_n_32bytes(uint32_t res[8], const uint32_t a[8]);
     fn P256_reduce_mod_n_32bytes(res: *mut u32, a: *const u32);
 
@@ -905,4 +908,116 @@ pub unsafe extern "C" fn p256_verify(
     }
 
     P256_verify_last_step(r, cp.as_ptr())
+}
+
+#[repr(C)]
+#[derive(Default)]
+struct FGInteger {
+    // To get the value this struct represents,
+    // interpret signed_value as a two's complement 288-bit little endian integer,
+    // and negate if flip_sign is -1
+    flip_sign: i32,         // 0 or -1
+    signed_value: [u32; 9], // of 288 bits, 257 are useful (top 31 bits are sign-extended from bit 256)
+}
+
+#[repr(C)]
+#[derive(Default)]
+struct XYInteger {
+    // To get the value this struct represents,
+    // interpret signed_value as an unsigned 288-bit little endian integer,
+    // and negate if flip_sign is -1
+    flip_sign: i32,  // 0 or -1
+    value: [u32; 8], // unsigned value, 0 <= value < P256_order
+}
+
+#[repr(C)]
+#[derive(Default)]
+struct State {
+    fg: [FGInteger; 2],
+    xy: [XYInteger; 2],
+}
+
+extern "C" {
+    static P256_order: [u32; 9];
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn P256_mod_n_inv(res: *mut u32, a: *const u32) {
+    // uint32_t out[8], const uint32_t in[8]
+
+    // This function follows the algorithm in section 12.1 of https://gcd.cr.yp.to/safegcd-20190413.pdf.
+    // It has been altered in the following ways:
+    //   1. Due to 32-bit cpu, we use 24 * 31 iterations instead of 12 * 62.
+    //   2. P-256 modulus instead of 2^255-19.
+    //      744 iterations are still enough and slightly more than the required 741 (floor((49*256+57)/17)).
+    //   3. Step 5 has been corrected to go back to step 2 instead of step 3.
+    //   4. The order of the matrix multiplications in step 6 has been changed to (T24*(T23*(T22*(...*(T1*[0, 1]))))),
+    //      where [0, 1] is a column vector to make it possible to be able to extract the "top-right corner", v, of T24*T23*...*T1.
+    //      The result v will then be contained in the first element of the resulting column vector.
+
+    let mut state: [State; 2] = Default::default();
+
+    state[0].fg[0].flip_sign = 0; // non-negative f
+    state[0].fg[0].signed_value.copy_from_slice(&P256_order); // f
+    state[0].fg[1].flip_sign = 0; // non-negative g
+    state[0].fg[1].signed_value[..8].copy_from_slice(slice::from_raw_parts(a, 8)); // g
+    state[0].fg[1].signed_value[8] = 0; // upper bits of g are 0
+                                        // We later need a factor 2^-744. The montgomery multiplication gives 2^(24*-32)=2^-768, so multiply the init value (1) by 2^24 here.
+    state[0].xy[1].value[0] = 1 << 24;
+
+    let mut delta: i32 = 1;
+    (0..24).for_each(|i| {
+        // Scaled translation matrix Ti
+        let mut matrix: [u32; 4] = [0; 4]; // element range: [-2^30, 2^31] (negative numbers are stored in two's complement form)
+
+        // Decode f and g into two's complement representation and use the lowest 32 bits in the P256_divsteps2_31 calculation
+        let negate_f: u32 = state[i % 2].fg[0].flip_sign as u32;
+        let negate_g: u32 = state[i % 2].fg[1].flip_sign as u32;
+        delta = P256_divsteps2_31(
+            delta,
+            (state[i % 2].fg[0].signed_value[0] ^ negate_f).wrapping_sub(negate_f),
+            (state[i % 2].fg[1].signed_value[0] ^ negate_g).wrapping_sub(negate_g),
+            matrix.as_mut_ptr(),
+        );
+
+        // "Jump step", calculates the new f and g values that applies after 31 divstep2 iterations
+        P256_matrix_mul_fg_9(
+            matrix[0],
+            matrix[1],
+            state[i % 2].fg.as_ptr(),
+            &mut state[(i + 1) % 2].fg[0],
+        );
+        P256_matrix_mul_fg_9(
+            matrix[2],
+            matrix[3],
+            state[i % 2].fg.as_ptr(),
+            &mut state[(i + 1) % 2].fg[1],
+        );
+
+        // Iterate the result vector
+        // Due to montgomery multiplication inside this function, each step also adds a 2^-32 factor
+        P256_matrix_mul_mod_n(
+            matrix[0],
+            matrix[1],
+            state[i % 2].xy.as_ptr(),
+            &mut state[(i + 1) % 2].xy[0],
+        );
+        P256_matrix_mul_mod_n(
+            matrix[2],
+            matrix[3],
+            state[i % 2].xy.as_ptr(),
+            &mut state[(i + 1) % 2].xy[1],
+        );
+    });
+
+    // Calculates val^-1 = sgn(f) * v * 2^-744, where v is the "top-right corner" of the resulting T24*T23*...*T1 matrix.
+    // In this implementation, at this point x contains v * 2^-744.
+    P256_negate_mod_n_if(
+        res,
+        &state[0].xy[0].value[0],
+        ((state[0].xy[0].flip_sign
+            ^ state[0].fg[0].flip_sign
+            ^ (state[0].fg[0].signed_value[8] as i32))
+            & 1) as u32,
+    );
 }
