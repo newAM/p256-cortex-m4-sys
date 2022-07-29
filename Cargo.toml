@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["sys", "testsuite"]
-default-members = ["sys"]
+members = ["p256-cm4", "testsuite"]
+default-members = ["p256-cm4"]
 
 [profile.dev]
 codegen-units = 1
