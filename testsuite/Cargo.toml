@@ -17,4 +17,4 @@ defmt-rtt = "0.3"
 defmt-test = "0.3"
 nucleo-wl55jc-bsp = { version = "0.5", features = ["stm32wl5x_cm4", "defmt", "rt"] }
 panic-probe = { version = "0.3", features = ["print-defmt" ] }
-p256-cortex-m4-sys.path = "../sys"
+p256-cm4.path = "../sys"

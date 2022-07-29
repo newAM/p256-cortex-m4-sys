@@ -53,11 +53,7 @@ fn into_bytes(i: [u32; 8]) -> [u8; 32] {
 fn safe_p256_convert_endianness(i: [u32; 8]) -> [u32; 8] {
     let mut ret = core::mem::MaybeUninit::<[u32; 8]>::uninit();
     unsafe {
-        p256_cortex_m4_sys::p256_convert_endianness(
-            ret.as_mut_ptr() as *mut _,
-            i.as_ptr() as *const _,
-            32,
-        );
+        p256_cm4::p256_convert_endianness(ret.as_mut_ptr() as *mut _, i.as_ptr() as *const _, 32);
         ret.assume_init()
     }
 }
@@ -85,7 +81,7 @@ mod tests {
 
     #[test]
     fn check_range_n() {
-        use p256_cortex_m4_sys::P256_check_range_n;
+        use p256_cm4::P256_check_range_n;
 
         let valid: bool = unsafe { P256_check_range_n(ZERO.as_ptr()) };
         defmt::assert!(!valid, "0 is not in range");
@@ -111,7 +107,7 @@ mod tests {
 
     #[test]
     fn check_range_p() {
-        use p256_cortex_m4_sys::P256_check_range_p;
+        use p256_cm4::P256_check_range_p;
 
         let valid: bool = unsafe { P256_check_range_p(ZERO.as_ptr()) };
         defmt::assert!(valid, "0 is in range");
@@ -137,7 +133,7 @@ mod tests {
 
     #[test]
     fn convert_endianness() {
-        use p256_cortex_m4_sys::p256_convert_endianness;
+        use p256_cm4::p256_convert_endianness;
 
         const INPUT: [u8; 32] = [
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D,
@@ -172,7 +168,7 @@ mod tests {
 
     #[test]
     fn point_to_octet_string_uncompressed() {
-        use p256_cortex_m4_sys::p256_point_to_octet_string_uncompressed;
+        use p256_cm4::p256_point_to_octet_string_uncompressed;
 
         let mut out: [u8; 65] = [0; 65];
         unsafe { p256_point_to_octet_string_uncompressed(out.as_mut_ptr(), X.as_ptr(), Y.as_ptr()) }
@@ -190,7 +186,7 @@ mod tests {
 
     #[test]
     fn point_to_octet_string_compressed() {
-        use p256_cortex_m4_sys::p256_point_to_octet_string_compressed;
+        use p256_cm4::p256_point_to_octet_string_compressed;
 
         let mut out: [u8; 65] = [0; 65];
         unsafe { p256_point_to_octet_string_compressed(out.as_mut_ptr(), X.as_ptr(), Y.as_ptr()) }
@@ -208,7 +204,7 @@ mod tests {
 
     #[test]
     fn point_to_octet_string_hybrid() {
-        use p256_cortex_m4_sys::p256_point_to_octet_string_hybrid;
+        use p256_cm4::p256_point_to_octet_string_hybrid;
 
         let mut out: [u8; 65] = [0; 65];
         unsafe { p256_point_to_octet_string_hybrid(out.as_mut_ptr(), X.as_ptr(), Y.as_ptr()) }
@@ -226,7 +222,7 @@ mod tests {
 
     #[test]
     fn octet_string_to_point() {
-        use p256_cortex_m4_sys::p256_octet_string_to_point;
+        use p256_cm4::p256_octet_string_to_point;
 
         const DER: [u8; 65] = [
             0x04, 0x57, 0x63, 0x64, 0xFF, 0xC3, 0x07, 0xBC, 0x8E, 0x7C, 0x2A, 0xB0, 0xB4, 0x91,
@@ -266,7 +262,7 @@ mod tests {
 
     #[test]
     fn verify() {
-        use p256_cortex_m4_sys::{p256_octet_string_to_point, p256_verify};
+        use p256_cm4::{p256_octet_string_to_point, p256_verify};
 
         let mut key: [u8; 65] = [0; 65];
         key[0] = 0x04;
@@ -301,7 +297,7 @@ mod tests {
 
     #[test]
     fn sign() {
-        use p256_cortex_m4_sys::{p256_convert_endianness, p256_sign, P256_check_range_n};
+        use p256_cm4::{p256_convert_endianness, p256_sign, P256_check_range_n};
 
         let mut private_key: [u32; 8] = [0; 8];
         unsafe {

@@ -24,12 +24,8 @@ extern "C" {
     fn P256_mul_mod_n(res: *mut u32, a: *const u32, b: *const u32);
     // void P256_add_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     fn P256_add_mod_n(res: *mut u32, a: *const u32, b: *const u32);
-    // void P256_mod_n_inv_vartime(uint32_t res[8], const uint32_t a[8]);
-    // fn P256_mod_n_inv(res: *mut u32, a: *const u32);
     // void P256_reduce_mod_n_32bytes(uint32_t res[8], const uint32_t a[8]);
     fn P256_reduce_mod_n_32bytes(res: *mut u32, a: *const u32);
-
-    // void P256_select_point(uint32_t (*output)[8], uint32_t* table, uint32_t num_coordinates, uint32_t index);
 
     // void P256_jacobian_to_affine(uint32_t affine_mont_x[8], uint32_t affine_mont_y[8], const uint32_t jacobian_mont[3][8]);
     fn P256_jacobian_to_affine(
