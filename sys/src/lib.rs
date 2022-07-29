@@ -875,14 +875,14 @@ pub unsafe extern "C" fn p256_verify(
         if slide_bp[i] > 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                P256_BASEPOINT_PRECOMP[usize::try_from(slide_bp[i] / 2).unwrap()].as_ptr(),
+                P256_BASEPOINT_PRECOMP[(slide_bp[i] / 2) as usize].as_ptr(),
                 false,
                 true,
             );
         } else if slide_bp[i] < 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                P256_BASEPOINT_PRECOMP[usize::try_from((-slide_bp[i]) / 2).unwrap()].as_ptr(),
+                P256_BASEPOINT_PRECOMP[((-slide_bp[i]) / 2) as usize].as_ptr(),
                 true,
                 true,
             );
@@ -890,14 +890,14 @@ pub unsafe extern "C" fn p256_verify(
         if slide_pk[i] > 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                pk_table[usize::try_from(slide_pk[i] / 2).unwrap()].as_ptr(),
+                pk_table[(slide_pk[i] / 2) as usize].as_ptr(),
                 false,
                 false,
             );
         } else if slide_pk[i] < 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                pk_table[usize::try_from((-slide_pk[i]) / 2).unwrap()].as_ptr(),
+                pk_table[((-slide_pk[i]) / 2) as usize].as_ptr(),
                 true,
                 false,
             );
