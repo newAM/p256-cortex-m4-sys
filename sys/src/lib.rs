@@ -838,10 +838,10 @@ pub unsafe extern "C" fn p256_verify(
 
     let mut cp: [[u32; 8]; 3] = [[0; 8]; 3];
 
-    let mut i: usize = 255;
     #[allow(clippy::comparison_chain)]
-    loop {
+    for i in (0..256).rev() {
         P256_double_j(cp.as_mut_ptr(), cp.as_ptr());
+
         if slide_bp[i] > 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
@@ -872,13 +872,8 @@ pub unsafe extern "C" fn p256_verify(
                 false,
             );
         }
-
-        i = match i.checked_sub(1) {
-            Some(i) => i,
-            None => break,
-        }
     }
 
-    P256_verify_last_step(r, cp.as_ptr() as *const *const u32)
+    P256_verify_last_step(r, cp.as_ptr())
 }
 */
