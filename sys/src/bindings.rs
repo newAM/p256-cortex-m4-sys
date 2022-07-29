@@ -215,31 +215,6 @@ extern "C" {
     ) -> bool;
 }
 extern "C" {
-    #[doc = " Creates an ECDSA signature, using a two-step procedure."]
-    #[doc = ""]
-    #[doc = " This function performs the first of two steps, and accounts for 99% of the time spent for generating an"]
-    #[doc = " ECDSA signature."]
-    #[doc = ""]
-    #[doc = " By splitting up into two steps, most of the work could be spent before deciding what message to sign, or"]
-    #[doc = " which private key to use."]
-    #[doc = ""]
-    #[doc = " The parameter \"k\" shall consist of a 256-bit random integer value. This random value MUST be generated from"]
-    #[doc = " a cryptographically secure random number generator, and MUST be unique for every pair of message hash and"]
-    #[doc = " private key."]
-    #[doc = ""]
-    #[doc = " With a small probability (~ 2^-32), this function will fail and return false for the given \"k\" and this"]
-    #[doc = " function MUST in that case be called again with a new random \"k\", until true is returned. This is in line"]
-    #[doc = " with the ECDSA standard."]
-    #[doc = ""]
-    #[doc = " As an alternative to using a random \"k\", \"k\" might be derived deterministically from the input, using a"]
-    #[doc = " sophisticated hash construction such as RFC 6979, or e.g. by hashing the private key, message hash and a"]
-    #[doc = " retry counter, using a secure hash function such as SHA-256."]
-    #[doc = ""]
-    #[doc = " The \"result\" parameter will contain the computed state, that is later to be passed to p256_sign_step2."]
-    #[doc = " A result state MUST NOT be reused for generating multiple signatures."]
-    pub fn p256_sign_step1(result: *mut SignPrecomp, k: *const u32) -> bool;
-}
-extern "C" {
     #[doc = " Second step of creating an ECDSA signature, using a two-step procedure."]
     #[doc = ""]
     #[doc = " This function performs the second of two steps, and accounts for the last 1% of the time spent for generating"]

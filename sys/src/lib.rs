@@ -26,7 +26,9 @@ extern "C" {
     // void P256_mul_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     // void P256_add_mod_n(uint32_t res[8], const uint32_t a[8], const uint32_t b[8]);
     // void P256_mod_n_inv_vartime(uint32_t res[8], const uint32_t a[8]);
+    fn P256_mod_n_inv(res: *mut u32, a: *const u32);
     // void P256_reduce_mod_n_32bytes(uint32_t res[8], const uint32_t a[8]);
+    fn P256_reduce_mod_n_32bytes(res: *mut u32, a: *const u32);
 
     // void P256_select_point(uint32_t (*output)[8], uint32_t* table, uint32_t num_coordinates, uint32_t index);
 
@@ -640,7 +642,7 @@ pub unsafe extern "C" fn p256_sign(
 ) -> bool {
     // uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t private_key[8], const uint32_t k[8]
     let mut t: SignPrecomp = Default::default();
-    if !p256_sign_step1(&mut t as *mut SignPrecomp, k) {
+    if !p256_sign_step1(&mut t, k) {
         (0..8).for_each(|offset| {
             *r.offset(offset) = 0;
             *s.offset(offset) = 0;
@@ -656,4 +658,53 @@ pub unsafe extern "C" fn p256_sign(
             &mut t as *mut SignPrecomp,
         )
     }
+}
+
+/// Creates an ECDSA signature, using a two-step procedure.
+///
+/// This function performs the first of two steps, and accounts for 99% of the time spent for generating an
+/// ECDSA signature.
+///
+/// By splitting up into two steps, most of the work could be spent before deciding what message to sign, or
+/// which private key to use.
+///
+/// The parameter "k" shall consist of a 256-bit random integer value. This random value MUST be generated from
+/// a cryptographically secure random number generator, and MUST be unique for every pair of message hash and
+/// private key.
+///
+/// With a small probability (~ 2^-32), this function will fail and return false for the given "k" and this
+/// function MUST in that case be called again with a new random "k", until true is returned. This is in line
+/// with the ECDSA standard.
+///
+/// As an alternative to using a random "k", "k" might be derived deterministically from the input, using a
+/// sophisticated hash construction such as RFC 6979, or e.g. by hashing the private key, message hash and a
+/// retry counter, using a secure hash function such as SHA-256.
+///
+/// The "result" parameter will contain the computed state, that is later to be passed to p256_sign_step2.
+/// A result state MUST NOT be reused for generating multiple signatures.
+#[no_mangle]
+pub unsafe extern "C" fn p256_sign_step1(result: &mut SignPrecomp, k: *const u32) -> bool {
+    // p256_sign_step1(struct SignPrecomp *result, const uint32_t k[8])
+
+    #[allow(clippy::never_loop)]
+    loop {
+        let mut point_res: [[u32; 8]; 2] = [[0; 8]; 2];
+        if !P256_check_range_n(k) {
+            break;
+        }
+        scalarmult_fixed_base(point_res[0].as_mut_ptr(), point_res[1].as_mut_ptr(), k);
+        P256_mod_n_inv(result.k_inv.as_mut_ptr(), k);
+        P256_from_montgomery(result.r.as_mut_ptr(), point_res[0].as_ptr());
+        P256_reduce_mod_n_32bytes(result.r.as_mut_ptr(), result.r.as_ptr());
+
+        let r_sum: u32 = (0..8).fold(0, |r_sum, i| r_sum | result.r[i]);
+        if r_sum == 0 {
+            break;
+        }
+        return true;
+    }
+
+    result.r.fill(0);
+    result.k_inv.fill(0);
+    false
 }

@@ -462,31 +462,6 @@ bool p256_verify(const uint32_t public_key_x[8], const uint32_t public_key_y[8],
     return P256_verify_last_step(r, (constarr)cp);
 }
 
-bool p256_sign_step1(struct SignPrecomp *result, const uint32_t k[8]) {
-    do {
-        uint32_t point_res[2][8];
-        if (!P256_check_range_n(k)) {
-            break;
-        }
-        scalarmult_fixed_base(point_res[0], point_res[1], k);
-        P256_mod_n_inv(result->k_inv, k);
-        P256_from_montgomery(result->r, point_res[0]);
-        P256_reduce_mod_n_32bytes(result->r, result->r);
-        
-        uint32_t r_sum = 0;
-        for (int i = 0; i < 8; i++) {
-            r_sum |= result->r[i];
-        }
-        if (r_sum == 0) {
-            break;
-        }
-        return true;
-    } while (false);
-    
-    memset(result, 0, sizeof(struct SignPrecomp));
-    return false;
-}
-
 bool p256_sign_step2(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t private_key[8], struct SignPrecomp *sign_precomp) {
     do {
         if (!P256_check_range_n(sign_precomp->k_inv) || !P256_check_range_n(sign_precomp->r)) { // just make sure user did not input an obviously invalid precomp
