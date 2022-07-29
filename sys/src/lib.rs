@@ -804,15 +804,12 @@ pub unsafe extern "C" fn p256_verify(
     }
 
     // Create a table of P, 3P, 5P, ..., 15P, where P is the public key.
-    P256_double_j(
-        pk_table[7].as_mut_ptr() as *mut *mut u32,
-        pk_table[0].as_ptr() as *const *const u32,
-    );
+    P256_double_j(pk_table[7].as_mut_ptr(), pk_table[0].as_ptr());
     (1..8).for_each(|i| {
         pk_table.copy_within(i..(i + 1), 7);
         P256_add_sub_j(
-            pk_table[i].as_mut_ptr() as *mut *mut u32,
-            pk_table[i - 1].as_ptr() as *const *const u32,
+            pk_table[i].as_mut_ptr(),
+            pk_table[i - 1].as_ptr(),
             false,
             false,
         );
@@ -839,41 +836,38 @@ pub unsafe extern "C" fn p256_verify(
     slide_257(slide_bp.as_mut_ptr(), u1.as_ptr() as *const u8);
     slide_257(slide_pk.as_mut_ptr(), u2.as_ptr() as *const u8);
 
-    let mut cp: [[u32; 3]; 8] = [[0; 3]; 8];
+    let mut cp: [[u32; 8]; 3] = [[0; 8]; 3];
 
     let mut i: usize = 255;
     #[allow(clippy::comparison_chain)]
     loop {
-        P256_double_j(
-            cp.as_mut_ptr() as *mut *mut u32,
-            cp.as_ptr() as *const *const u32,
-        );
+        P256_double_j(cp.as_mut_ptr(), cp.as_ptr());
         if slide_bp[i] > 0 {
             P256_add_sub_j(
-                cp.as_mut_ptr() as *mut *mut u32,
-                P256_BASEPOINT_PRECOMP[(slide_bp[i] / 2) as usize].as_ptr() as *const *const u32,
+                cp.as_mut_ptr(),
+                P256_BASEPOINT_PRECOMP[(slide_bp[i] / 2) as usize].as_ptr(),
                 false,
                 true,
             );
         } else if slide_bp[i] < 0 {
             P256_add_sub_j(
-                cp.as_mut_ptr() as *mut *mut u32,
-                P256_BASEPOINT_PRECOMP[((-slide_bp[i]) / 2) as usize].as_ptr() as *const *const u32,
+                cp.as_mut_ptr(),
+                P256_BASEPOINT_PRECOMP[((-slide_bp[i]) / 2) as usize].as_ptr(),
                 true,
                 true,
             );
         }
         if slide_pk[i] > 0 {
             P256_add_sub_j(
-                cp.as_mut_ptr() as *mut *mut u32,
-                pk_table[(slide_pk[i] / 2) as usize].as_ptr() as *const *const u32,
+                cp.as_mut_ptr(),
+                pk_table[(slide_pk[i] / 2) as usize].as_ptr(),
                 false,
                 false,
             );
         } else if slide_pk[i] < 0 {
             P256_add_sub_j(
-                cp.as_mut_ptr() as *mut *mut u32,
-                pk_table[((-slide_pk[i]) / 2) as usize].as_ptr() as *const *const u32,
+                cp.as_mut_ptr(),
+                pk_table[((-slide_pk[i]) / 2) as usize].as_ptr(),
                 true,
                 false,
             );
