@@ -74,42 +74,6 @@ void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should
 
 extern uint32_t P256_order[9];
 
-// Creates a representation of a (little endian integer),
-// so that r[0] + 2*r[1] + 2^2*r[2] + 2^3*r[3] + ... = a,
-// where each r[i] is -15, -13, ..., 11, 13, 15 or 0.
-// Only around 1/5.5 of the r[i] will be non-zero.
-void slide_257(signed char r[257], const uint8_t a[32]) {
-    for (int i = 0; i < 256; ++i) {
-        r[i] = 1 & (a[i >> 3] >> (i & 7));
-    }
-    r[256] = 0;
-
-    for (int i = 0; i < 256; i++) {
-        if (r[i] != 0) {
-            for (int b = 1; b <= 4 && i + b < 256; b++) {
-                if (r[i + b] != 0) {
-                    if (r[i] + (r[i + b] << b) <= 15) {
-                        r[i] += r[i + b] << b; r[i + b] = 0;
-                    } else if (r[i] - (r[i + b] << b) >= -15) {
-                        r[i] -= r[i + b] << b;
-                        for (;;) {
-                            r[i + b] = 0;
-                            b++;
-                            if (!r[i + b]) {
-                                r[i + b] = 1;
-                                b--; // Will be added back after loop footer b++
-                                break;
-                            }
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-}
-
 void P256_mod_n_inv(uint32_t out[8], const uint32_t in[8]) {
     // This function follows the algorithm in section 12.1 of https://gcd.cr.yp.to/safegcd-20190413.pdf.
     // It has been altered in the following ways:

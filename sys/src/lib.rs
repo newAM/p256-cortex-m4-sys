@@ -57,10 +57,6 @@ extern "C" {
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
     // void P256_negate_mod_n_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
-
-    // TODO: remove this, was a C private function
-    // void slide_257(signed char r[257], const uint8_t a[32]);
-    fn slide_257(r: *mut i8, a: *const u8);
 }
 
 extern "C" {
@@ -759,6 +755,45 @@ pub unsafe extern "C" fn p256_sign_step2(
     false
 }
 
+// Creates a representation of a (little endian integer),
+// so that r[0] + 2*r[1] + 2^2*r[2] + 2^3*r[3] + ... = a,
+// where each r[i] is -15, -13, ..., 11, 13, 15 or 0.
+// Only around 1/5.5 of the r[i] will be non-zero.
+fn slide_257(r: &mut [i8; 257], a: &[u8; 32]) {
+    (0..256).for_each(|i| {
+        r[i] = (1 & (a[i >> 3] >> (i & 7))) as i8;
+    });
+    r[256] = 0;
+
+    (0..256).for_each(|i| {
+        if r[i] != 0 {
+            let mut b: usize = 1;
+            while b <= 4 && i + b < 256 {
+                if r[i + b] != 0 {
+                    if r[i] + (r[i + b] << b) <= 15 {
+                        r[i] += r[i + b] << b;
+                        r[i + b] = 0;
+                    } else if r[i] - (r[i + b] << b) >= -15 {
+                        r[i] -= r[i + b] << b;
+                        loop {
+                            r[i + b] = 0;
+                            b += 1;
+                            if r[i + b] == 0 {
+                                r[i + b] = 1;
+                                b -= 1; // Will be added back after loop footer b++
+                                break;
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                b += 1;
+            }
+        }
+    });
+}
+
 /// Verifies an ECDSA signature.
 ///
 /// Returns true if the signature is valid for the given input, otherwise false.
@@ -822,8 +857,14 @@ pub unsafe extern "C" fn p256_verify(
     let mut slide_bp: [i8; 257] = [0; 257];
     let mut slide_pk: [i8; 257] = [0; 257];
 
-    slide_257(slide_bp.as_mut_ptr(), u1.as_ptr() as *const u8);
-    slide_257(slide_pk.as_mut_ptr(), u2.as_ptr() as *const u8);
+    slide_257(
+        &mut slide_bp,
+        core::mem::transmute::<&[u32; 8], &[u8; 32]>(&u1),
+    );
+    slide_257(
+        &mut slide_pk,
+        core::mem::transmute::<&[u32; 8], &[u8; 32]>(&u2),
+    );
 
     let mut cp: [[u32; 8]; 3] = [[0; 8]; 3];
 
