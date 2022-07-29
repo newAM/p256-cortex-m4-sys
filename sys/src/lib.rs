@@ -536,10 +536,7 @@ unsafe extern "C" fn scalarmult_fixed_base(
                 current_point[..2].copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
                 current_point[2].copy_from_slice(&ONE_MONTGOMERY);
             } else {
-                P256_double_j(
-                    current_point.as_mut_ptr() as *mut *mut u32,
-                    current_point.as_ptr() as *const *const u32,
-                );
+                P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr());
 
                 let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 1).wrapping_sub(1); // positive: 0, negative: -1
                 mask = (mask ^ sign) & 7;
@@ -550,8 +547,8 @@ unsafe extern "C" fn scalarmult_fixed_base(
                     sign & 1,
                 );
                 P256_add_sub_j(
-                    current_point.as_mut_ptr() as *mut *mut u32,
-                    selected_point.as_mut_ptr() as *const *mut u32,
+                    current_point.as_mut_ptr(),
+                    selected_point.as_mut_ptr(),
                     false,
                     true,
                 );
@@ -570,8 +567,8 @@ unsafe extern "C" fn scalarmult_fixed_base(
                 sign & 1,
             );
             P256_add_sub_j(
-                current_point.as_mut_ptr() as *mut *mut u32,
-                selected_point.as_mut_ptr() as *const *mut u32,
+                current_point.as_mut_ptr(),
+                selected_point.as_mut_ptr(),
                 false,
                 true,
             );
