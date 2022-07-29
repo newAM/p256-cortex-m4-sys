@@ -1,6 +1,4 @@
 #![no_std]
-#![allow(non_camel_case_types)]
-#![allow(non_upper_case_globals)]
 #![allow(clippy::missing_safety_doc)]
 
 use core::arch::global_asm;
@@ -962,7 +960,8 @@ pub unsafe extern "C" fn P256_mod_n_inv(res: *mut u32, a: *const u32) {
     state[0].fg[1].flip_sign = 0; // non-negative g
     state[0].fg[1].signed_value[..8].copy_from_slice(slice::from_raw_parts(a, 8)); // g
     state[0].fg[1].signed_value[8] = 0; // upper bits of g are 0
-                                        // We later need a factor 2^-744. The montgomery multiplication gives 2^(24*-32)=2^-768, so multiply the init value (1) by 2^24 here.
+
+    // We later need a factor 2^-744. The montgomery multiplication gives 2^(24*-32)=2^-768, so multiply the init value (1) by 2^24 here.
     state[0].xy[1].value[0] = 1 << 24;
 
     let mut delta: i32 = 1;
