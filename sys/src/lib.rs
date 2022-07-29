@@ -34,7 +34,7 @@ extern "C" {
     fn P256_jacobian_to_affine(
         affine_mont_x: *mut u32,
         affine_mont_y: *mut u32,
-        jacobian_mont: *const *mut u32,
+        jacobian_mont: *const [u32; 8],
     );
     // bool P256_point_is_on_curve(const uint32_t x_mont[8], const uint32_t y_mont[8]);
     fn P256_point_is_on_curve(x_mont: *const u32, y_mont: *const u32) -> bool;
@@ -42,16 +42,16 @@ extern "C" {
     fn P256_decompress_point(y: *mut u32, x: *const u32, y_parity: u32) -> bool;
 
     // void P256_double_j(uint32_t jacobian_point_out[3][8], const uint32_t jacobian_point_in[3][8]);
-    fn P256_double_j(jacobian_point_out: *mut *mut u32, jacobian_point_in: *const *const u32);
+    fn P256_double_j(jacobian_point_out: *mut [u32; 8], jacobian_point_in: *const [u32; 8]);
     // void P256_add_sub_j(uint32_t jacobian_point1[3][8], const uint32_t (*point2)[8], bool is_sub, bool p2_is_affine);
     fn P256_add_sub_j(
-        jacobian_point1: *mut *mut u32,
-        point2: *const *const u32,
+        jacobian_point1: *mut [u32; 8],
+        point2: *const [u32; 8],
         is_sub: bool,
         p2_is_affine: bool,
     );
     // bool P256_verify_last_step(const uint32_t r[8], const uint32_t jacobian_point[3][8]);
-    fn P256_verify_last_step(r: *const u32, jacobian_point: *const *const u32) -> bool;
+    fn P256_verify_last_step(r: *const u32, jacobian_point: *const [u32; 8]) -> bool;
 
     // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
@@ -328,18 +328,10 @@ unsafe extern "C" fn scalarmult_variable_base(
     table[0][0].copy_from_slice(input_mont_x);
     table[0][1].copy_from_slice(input_mont_y);
     table[0][2].copy_from_slice(ONE_MONTGOMERY.as_slice());
-    P256_double_j(
-        table[7].as_ptr() as *mut *mut u32,
-        table[0].as_ptr() as *const *const u32,
-    );
+    P256_double_j(table[7].as_mut_ptr(), table[0].as_ptr());
     (1..8).for_each(|i| {
         table.copy_within(7..8, i);
-        P256_add_sub_j(
-            table[i].as_mut_ptr() as *mut *mut u32,
-            table[i - 1].as_ptr() as *const *const u32,
-            false,
-            false,
-        );
+        P256_add_sub_j(table[i].as_mut_ptr(), table[i - 1].as_ptr(), false, false);
     });
 
     // Calculate the result as (((((((((e[63]*G)*2^4)+e[62])*2^4)+e[61])*2^4)...)+e[1])*2^4)+e[0] = (2^252*e[63] + 2^248*e[62] + ... + e[0])*G.
@@ -351,10 +343,7 @@ unsafe extern "C" fn scalarmult_variable_base(
     let mut i: usize = 62;
     loop {
         (0..4).for_each(|_| {
-            P256_double_j(
-                current_point.as_mut_ptr() as *mut *mut u32,
-                current_point.as_ptr() as *const *const u32,
-            );
+            P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr());
         });
 
         let mut selected_point: [[u32; 8]; 3] = [[0; 8]; 3];
@@ -371,8 +360,8 @@ unsafe extern "C" fn scalarmult_variable_base(
         // the probability of that random value to be generated is around 1/2^255 and an
         // attacker could easily test this case anyway.
         P256_add_sub_j(
-            current_point.as_mut_ptr() as *mut *mut u32,
-            selected_point.as_ptr() as *const *const u32,
+            current_point.as_mut_ptr(),
+            selected_point.as_ptr(),
             false,
             false,
         );
@@ -383,11 +372,7 @@ unsafe extern "C" fn scalarmult_variable_base(
         }
     }
 
-    P256_jacobian_to_affine(
-        output_mont_x,
-        output_mont_y,
-        current_point.as_ptr() as *const *mut u32,
-    );
+    P256_jacobian_to_affine(output_mont_x, output_mont_y, current_point.as_ptr());
 
     // If the scalar was initially even, we now negate the result to get the correct result, since -(scalar*G) = (-scalar*G).
     // This is done by negating y, since -(x,y) = (x,-y).
