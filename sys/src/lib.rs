@@ -759,20 +759,6 @@ pub unsafe extern "C" fn p256_sign_step2(
     false
 }
 
-extern "C" {
-    /// Verifies an ECDSA signature.
-    ///
-    /// Returns true if the signature is valid for the given input, otherwise false.
-    pub fn p256_verify(
-        public_key_x: *const u32,
-        public_key_y: *const u32,
-        hash: *const u8,
-        hashlen_in_bytes: u32,
-        r: *const u32,
-        s: *const u32,
-    ) -> bool;
-}
-/*
 /// Verifies an ECDSA signature.
 ///
 /// Returns true if the signature is valid for the given input, otherwise false.
@@ -819,12 +805,15 @@ pub unsafe extern "C" fn p256_verify(
     let mut u1: [u32; 8] = [0; 8];
     let mut u2: [u32; 8] = [0; 8];
 
-    let z: &mut [u8] = slice::from_raw_parts_mut(r as *mut u8, hashlen_in_bytes as usize);
-    hash_to_z(z, slice::from_raw_parts(hash, hashlen_in_bytes as usize));
+    let mut z: [u32; 8] = [0; 8];
+    hash_to_z(
+        core::mem::transmute::<&mut [u32; 8], &mut [u8; 32]>(&mut z),
+        slice::from_raw_parts(hash, hashlen_in_bytes as usize),
+    );
 
     P256_mod_n_inv(w.as_mut_ptr(), s);
 
-    P256_mul_mod_n(u1.as_mut_ptr(), r as *const u32, w.as_ptr());
+    P256_mul_mod_n(u1.as_mut_ptr(), z.as_ptr(), w.as_ptr());
     P256_mul_mod_n(u2.as_mut_ptr(), r, w.as_ptr());
 
     // Each value in these arrays will be an odd integer v, so that -15 <= v <= 15.
@@ -839,20 +828,20 @@ pub unsafe extern "C" fn p256_verify(
     let mut cp: [[u32; 8]; 3] = [[0; 8]; 3];
 
     #[allow(clippy::comparison_chain)]
-    for i in (0..256).rev() {
+    for i in (0..257).rev() {
         P256_double_j(cp.as_mut_ptr(), cp.as_ptr());
 
         if slide_bp[i] > 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                P256_BASEPOINT_PRECOMP[(slide_bp[i] / 2) as usize].as_ptr(),
+                P256_BASEPOINT_PRECOMP[usize::try_from(slide_bp[i] / 2).unwrap()].as_ptr(),
                 false,
                 true,
             );
         } else if slide_bp[i] < 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                P256_BASEPOINT_PRECOMP[((-slide_bp[i]) / 2) as usize].as_ptr(),
+                P256_BASEPOINT_PRECOMP[usize::try_from((-slide_bp[i]) / 2).unwrap()].as_ptr(),
                 true,
                 true,
             );
@@ -860,14 +849,14 @@ pub unsafe extern "C" fn p256_verify(
         if slide_pk[i] > 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                pk_table[(slide_pk[i] / 2) as usize].as_ptr(),
+                pk_table[usize::try_from(slide_pk[i] / 2).unwrap()].as_ptr(),
                 false,
                 false,
             );
         } else if slide_pk[i] < 0 {
             P256_add_sub_j(
                 cp.as_mut_ptr(),
-                pk_table[((-slide_pk[i]) / 2) as usize].as_ptr(),
+                pk_table[usize::try_from((-slide_pk[i]) / 2).unwrap()].as_ptr(),
                 true,
                 false,
             );
@@ -876,4 +865,3 @@ pub unsafe extern "C" fn p256_verify(
 
     P256_verify_last_step(r, cp.as_ptr())
 }
-*/

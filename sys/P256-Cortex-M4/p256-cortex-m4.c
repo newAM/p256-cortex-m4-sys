@@ -327,6 +327,7 @@ static void scalarmult_variable_base(uint32_t output_mont_x[8], uint32_t output_
 }
 */
 
+#if 0
 bool p256_verify(const uint32_t public_key_x[8], const uint32_t public_key_y[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t r[8], const uint32_t s[8]) {
     if (!P256_check_range_n(r) || !P256_check_range_n(s)) {
         return false;
@@ -390,3 +391,4 @@ bool p256_verify(const uint32_t public_key_x[8], const uint32_t public_key_y[8],
     
     return P256_verify_last_step(r, (constarr)cp);
 }
+#endif
