@@ -80,6 +80,17 @@ extern "C" {
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
 
+// This contains two tables, 8 points each in affine coordinates in montgomery form
+// The first table contains these points:
+// (2^192 - 2^128 - 2^64 - 1)G
+// (2^192 - 2^128 - 2^64 + 1)G
+// (2^192 - 2^128 + 2^64 - 1)G
+// (2^192 - 2^128 + 2^64 + 1)G
+// (2^192 + 2^128 - 2^64 - 1)G
+// (2^192 + 2^128 - 2^64 + 1)G
+// (2^192 + 2^128 + 2^64 - 1)G
+// (2^192 + 2^128 + 2^64 + 1)G
+// The second table contains the same points multiplied by 2^32
 #[rustfmt::skip]
 const P256_BASEPOINT_PRECOMP2: [[[[u32; 8]; 2]; 8]; 2] =
 [
@@ -478,14 +489,6 @@ macro_rules! get_bit {
     };
 }
 
-// scalarmult_variable_base(
-//     output_mont_x,
-//     output_mont_y,
-//     P256_BASEPOINT_PRECOMP2[0][0].as_ptr() as *const u32,
-//     P256_BASEPOINT_PRECOMP2[0][1].as_ptr() as *const u32,
-//     scalar,
-// );
-
 // Calculates scalar*G in constant time
 #[no_mangle]
 unsafe extern "C" fn scalarmult_fixed_base(
@@ -495,14 +498,10 @@ unsafe extern "C" fn scalarmult_fixed_base(
 ) {
     // u32 output_mont_x[8], u32 output_mont_y[8], const u32 scalar[8]
 
-    let output_mont_x: &mut [u32] = slice::from_raw_parts_mut(output_mont_x, 8);
-    let output_mont_y: &mut [u32] = slice::from_raw_parts_mut(output_mont_y, 8);
-    let scalar: &[u32] = slice::from_raw_parts(scalar, 8);
-
     // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
-    let even: u32 = (scalar[0] & 1) ^ 1;
+    let even: u32 = ((*scalar) & 1) ^ 1;
     let mut scalar2: [u32; 8] = [0; 8];
-    P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar.as_ptr(), even);
+    P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar, even);
 
     // This algorithm conceptually rewrites the odd scalar as s[0] + 2^1*s[1] + 2^2*s[2] + ... + 2^255*s[255], where each s[i] is -1 or 1.
     // By initially setting s[i] to the corresponding bit S[i] in the original odd scalar S, we go from lsb to msb, and whenever a value s[i] is 0,
@@ -516,7 +515,7 @@ unsafe extern "C" fn scalarmult_fixed_base(
     let mut current_point: [[u32; 8]; 3] = [[0; 8]; 3];
     let mut selected_point: [[u32; 8]; 2] = [[0; 8]; 2];
 
-    let mut i: usize = 32;
+    let mut i: usize = 31;
     loop {
         {
             let mut mask: u32 = get_bit!(scalar2, i + 32 + 1)
@@ -574,13 +573,13 @@ unsafe extern "C" fn scalarmult_fixed_base(
     }
 
     P256_jacobian_to_affine(
-        output_mont_x.as_mut_ptr(),
-        output_mont_y.as_mut_ptr(),
+        output_mont_x,
+        output_mont_y,
         current_point.as_ptr() as *const *mut u32,
     );
 
     // Negate final result if the scalar was initially even.
-    P256_negate_mod_p_if(output_mont_y.as_mut_ptr(), output_mont_y.as_ptr(), even);
+    P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
 }
 */
 

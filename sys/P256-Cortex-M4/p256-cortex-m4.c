@@ -256,7 +256,7 @@ static inline uint32_t abs_int(int8_t a) {
     result |= a & (mask ^ 0xf);
     return result;
 }
-
+/*
 // Calculates scalar*P in constant time (except for the scalars 2 and n-2, for which the results take a few extra cycles to compute)
 static void scalarmult_variable_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t input_mont_x[8], const uint32_t input_mont_y[8], const uint32_t scalar[8]) {
     // Based on https://eprint.iacr.org/2014/130.pdf, Algorithm 1.
@@ -325,7 +325,7 @@ static void scalarmult_variable_base(uint32_t output_mont_x[8], uint32_t output_
     // This is done by negating y, since -(x,y) = (x,-y).
     P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
 }
-
+*/
 
 #define get_bit(arr, i) ((arr[(i) / 32] >> ((i) % 32)) & 1)
 
