@@ -526,8 +526,7 @@ unsafe extern "C" fn scalarmult_fixed_base(
     let mut current_point: [[u32; 8]; 3] = [[0; 8]; 3];
     let mut selected_point: [[u32; 8]; 2] = [[0; 8]; 2];
 
-    let mut i: usize = 31;
-    loop {
+    for i in (0..32).rev() {
         {
             let mut mask: u32 = get_bit!(scalar2, i + 32 + 1)
                 | (get_bit!(scalar2, i + 64 + 32 + 1) << 1)
@@ -573,18 +572,9 @@ unsafe extern "C" fn scalarmult_fixed_base(
                 true,
             );
         }
-
-        i = match i.checked_sub(1) {
-            Some(i) => i,
-            None => break,
-        }
     }
 
-    P256_jacobian_to_affine(
-        output_mont_x,
-        output_mont_y,
-        current_point.as_ptr() as *const *mut u32,
-    );
+    P256_jacobian_to_affine(output_mont_x, output_mont_y, current_point.as_ptr());
 
     // Negate final result if the scalar was initially even.
     P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
