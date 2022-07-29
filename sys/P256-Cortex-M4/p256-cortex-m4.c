@@ -165,7 +165,7 @@ static void hash_to_z(uint32_t z[8], const uint8_t* hash, uint32_t hashlen) {
 // so that r[0] + 2*r[1] + 2^2*r[2] + 2^3*r[3] + ... = a,
 // where each r[i] is -15, -13, ..., 11, 13, 15 or 0.
 // Only around 1/5.5 of the r[i] will be non-zero.
-static void slide_257(signed char r[257], const uint8_t a[32]) {
+void slide_257(signed char r[257], const uint8_t a[32]) {
     for (int i = 0; i < 256; ++i) {
         r[i] = 1 & (a[i >> 3] >> (i & 7));
     }

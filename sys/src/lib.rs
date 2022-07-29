@@ -46,11 +46,12 @@ extern "C" {
     // void P256_add_sub_j(uint32_t jacobian_point1[3][8], const uint32_t (*point2)[8], bool is_sub, bool p2_is_affine);
     fn P256_add_sub_j(
         jacobian_point1: *mut *mut u32,
-        point2: *const *mut u32,
+        point2: *const *const u32,
         is_sub: bool,
         p2_is_affine: bool,
     );
     // bool P256_verify_last_step(const uint32_t r[8], const uint32_t jacobian_point[3][8]);
+    fn P256_verify_last_step(r: *const u32, jacobian_point: *const *const u32) -> bool;
 
     // void P256_negate_mod_p_if(uint32_t out[8], const uint32_t in[8], uint32_t should_negate);
     fn P256_negate_mod_p_if(out: *mut u32, inn: *const u32, should_negate: u32);
@@ -60,6 +61,10 @@ extern "C" {
     // TODO: remove this, was a C private function
     // void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8]);
     fn scalarmult_fixed_base(output_mont_x: *mut u32, output_mont_y: *mut u32, scalar: *const u32);
+
+    // TODO: remove this, was a C private function
+    // void slide_257(signed char r[257], const uint8_t a[32]);
+    fn slide_257(r: *mut i8, a: *const u8);
 }
 
 extern "C" {
@@ -79,6 +84,27 @@ extern "C" {
 }
 
 const ONE_MONTGOMERY: [u32; 8] = [1, 0, 0, 0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe, 0];
+
+// This table contains 1G, 3G, 5G, ... 15G in affine coordinates in montgomery form
+#[rustfmt::skip]
+const P256_BASEPOINT_PRECOMP: [[[u32; 8]; 2]; 8]= [
+[[0x18a9143c, 0x79e730d4, 0x5fedb601, 0x75ba95fc, 0x77622510, 0x79fb732b, 0xa53755c6, 0x18905f76],
+[0xce95560a, 0xddf25357, 0xba19e45c, 0x8b4ab8e4, 0xdd21f325, 0xd2e88688, 0x25885d85, 0x8571ff18]],
+[[0x4eebc127, 0xffac3f90, 0x87d81fb, 0xb027f84a, 0x87cbbc98, 0x66ad77dd, 0xb6ff747e, 0x26936a3f],
+[0xc983a7eb, 0xb04c5c1f, 0x861fe1a, 0x583e47ad, 0x1a2ee98e, 0x78820831, 0xe587cc07, 0xd5f06a29]],
+[[0xc45c61f5, 0xbe1b8aae, 0x94b9537d, 0x90ec649a, 0xd076c20c, 0x941cb5aa, 0x890523c8, 0xc9079605],
+[0xe7ba4f10, 0xeb309b4a, 0xe5eb882b, 0x73c568ef, 0x7e7a1f68, 0x3540a987, 0x2dd1e916, 0x73a076bb]],
+[[0xa0173b4f, 0x746354e, 0xd23c00f7, 0x2bd20213, 0xc23bb08, 0xf43eaab5, 0xc3123e03, 0x13ba5119],
+[0x3f5b9d4d, 0x2847d030, 0x5da67bdd, 0x6742f2f2, 0x77c94195, 0xef933bdc, 0x6e240867, 0xeaedd915]],
+[[0x264e20e8, 0x75c96e8f, 0x59a7a841, 0xabe6bfed, 0x44c8eb00, 0x2cc09c04, 0xf0c4e16b, 0xe05b3080],
+[0xa45f3314, 0x1eb7777a, 0xce5d45e3, 0x56af7bed, 0x88b12f1a, 0x2b6e019a, 0xfd835f9b, 0x86659cd]],
+[[0x6245e404, 0xea7d260a, 0x6e7fdfe0, 0x9de40795, 0x8dac1ab5, 0x1ff3a415, 0x649c9073, 0x3e7090f1],
+[0x2b944e88, 0x1a768561, 0xe57f61c8, 0x250f939e, 0x1ead643d, 0xc0daa89, 0xe125b88e, 0x68930023]],
+[[0x4b2ed709, 0xccc42563, 0x856fd30d, 0xe356769, 0x559e9811, 0xbcbcd43f, 0x5395b759, 0x738477ac],
+[0xc00ee17f, 0x35752b90, 0x742ed2e3, 0x68748390, 0xbd1f5bc1, 0x7cd06422, 0xc9e7b797, 0xfbc08769]],
+[[0xbc60055b, 0x72bcd8b7, 0x56e27e4b, 0x3cc23ee, 0xe4819370, 0xee337424, 0xad3da09, 0xe2aa0e43],
+[0x6383c45d, 0x40b8524f, 0x42a41b25, 0xd7663554, 0x778a4797, 0x64efa6de, 0x7079adf4, 0x2042170a]]
+];
 
 // This contains two tables, 8 points each in affine coordinates in montgomery form
 // The first table contains these points:
@@ -310,7 +336,7 @@ unsafe extern "C" fn scalarmult_variable_base(
         table.copy_within(7..8, i);
         P256_add_sub_j(
             table[i].as_mut_ptr() as *mut *mut u32,
-            table[i - 1].as_mut_ptr() as *const *mut u32,
+            table[i - 1].as_ptr() as *const *const u32,
             false,
             false,
         );
@@ -346,7 +372,7 @@ unsafe extern "C" fn scalarmult_variable_base(
         // attacker could easily test this case anyway.
         P256_add_sub_j(
             current_point.as_mut_ptr() as *mut *mut u32,
-            selected_point.as_mut_ptr() as *const *mut u32,
+            selected_point.as_ptr() as *const *const u32,
             false,
             false,
         );
@@ -780,3 +806,119 @@ extern "C" {
         s: *const u32,
     ) -> bool;
 }
+/*
+/// Verifies an ECDSA signature.
+///
+/// Returns true if the signature is valid for the given input, otherwise false.
+#[no_mangle]
+pub unsafe extern "C" fn p256_verify(
+    public_key_x: *const u32,
+    public_key_y: *const u32,
+    hash: *const u8,
+    hashlen_in_bytes: u32,
+    r: *const u32,
+    s: *const u32,
+) -> bool {
+    // const uint32_t public_key_x[8], const uint32_t public_key_y[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t r[8], const uint32_t s[8]
+    if !P256_check_range_n(r) || !P256_check_range_n(s) {
+        return false;
+    }
+
+    if !P256_check_range_p(public_key_x) || !P256_check_range_p(public_key_y) {
+        return false;
+    }
+
+    let mut pk_table: [[[u32; 8]; 3]; 8] = [[[0; 8]; 3]; 8];
+    P256_to_montgomery(pk_table[0][0].as_mut_ptr(), public_key_x);
+    P256_to_montgomery(pk_table[0][1].as_mut_ptr(), public_key_y);
+    pk_table[0][2].copy_from_slice(&ONE_MONTGOMERY);
+
+    if !P256_point_is_on_curve(pk_table[0][0].as_ptr(), pk_table[0][1].as_ptr()) {
+        return false;
+    }
+
+    // Create a table of P, 3P, 5P, ..., 15P, where P is the public key.
+    P256_double_j(
+        pk_table[7].as_mut_ptr() as *mut *mut u32,
+        pk_table[0].as_ptr() as *const *const u32,
+    );
+    (1..8).for_each(|i| {
+        pk_table.copy_within(i..(i + 1), 7);
+        P256_add_sub_j(
+            pk_table[i].as_mut_ptr() as *mut *mut u32,
+            pk_table[i - 1].as_ptr() as *const *const u32,
+            false,
+            false,
+        );
+    });
+
+    let mut w: [u32; 8] = [0; 8];
+    let mut u1: [u32; 8] = [0; 8];
+    let mut u2: [u32; 8] = [0; 8];
+
+    let z: &mut [u8] = slice::from_raw_parts_mut(r as *mut u8, hashlen_in_bytes as usize);
+    hash_to_z(z, slice::from_raw_parts(hash, hashlen_in_bytes as usize));
+
+    P256_mod_n_inv(w.as_mut_ptr(), s);
+
+    P256_mul_mod_n(u1.as_mut_ptr(), r as *const u32, w.as_ptr());
+    P256_mul_mod_n(u2.as_mut_ptr(), r, w.as_ptr());
+
+    // Each value in these arrays will be an odd integer v, so that -15 <= v <= 15.
+    // Around 1/5.5 of them will be non-zero.
+
+    let mut slide_bp: [i8; 257] = [0; 257];
+    let mut slide_pk: [i8; 257] = [0; 257];
+
+    slide_257(slide_bp.as_mut_ptr(), u1.as_ptr() as *const u8);
+    slide_257(slide_pk.as_mut_ptr(), u2.as_ptr() as *const u8);
+
+    let mut cp: [[u32; 3]; 8] = [[0; 3]; 8];
+
+    let mut i: usize = 255;
+    #[allow(clippy::comparison_chain)]
+    loop {
+        P256_double_j(
+            cp.as_mut_ptr() as *mut *mut u32,
+            cp.as_ptr() as *const *const u32,
+        );
+        if slide_bp[i] > 0 {
+            P256_add_sub_j(
+                cp.as_mut_ptr() as *mut *mut u32,
+                P256_BASEPOINT_PRECOMP[(slide_bp[i] / 2) as usize].as_ptr() as *const *const u32,
+                false,
+                true,
+            );
+        } else if slide_bp[i] < 0 {
+            P256_add_sub_j(
+                cp.as_mut_ptr() as *mut *mut u32,
+                P256_BASEPOINT_PRECOMP[((-slide_bp[i]) / 2) as usize].as_ptr() as *const *const u32,
+                true,
+                true,
+            );
+        }
+        if slide_pk[i] > 0 {
+            P256_add_sub_j(
+                cp.as_mut_ptr() as *mut *mut u32,
+                pk_table[(slide_pk[i] / 2) as usize].as_ptr() as *const *const u32,
+                false,
+                false,
+            );
+        } else if slide_pk[i] < 0 {
+            P256_add_sub_j(
+                cp.as_mut_ptr() as *mut *mut u32,
+                pk_table[((-slide_pk[i]) / 2) as usize].as_ptr() as *const *const u32,
+                true,
+                false,
+            );
+        }
+
+        i = match i.checked_sub(1) {
+            Some(i) => i,
+            None => break,
+        }
+    }
+
+    P256_verify_last_step(r, cp.as_ptr() as *const *const u32)
+}
+*/
