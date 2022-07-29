@@ -59,10 +59,6 @@ extern "C" {
     fn P256_negate_mod_n_if(out: *mut u32, inn: *const u32, should_negate: u32);
 
     // TODO: remove this, was a C private function
-    // void scalarmult_fixed_base(uint32_t output_mont_x[8], uint32_t output_mont_y[8], const uint32_t scalar[8]);
-    fn scalarmult_fixed_base(output_mont_x: *mut u32, output_mont_y: *mut u32, scalar: *const u32);
-
-    // TODO: remove this, was a C private function
     // void slide_257(signed char r[257], const uint8_t a[32]);
     fn slide_257(r: *mut i8, a: *const u8);
 }
@@ -493,7 +489,6 @@ pub unsafe extern "C" fn p256_keygen(
     p256_scalarmult_base(public_key_x, public_key_y, private_key)
 }
 
-/*
 macro_rules! get_bit {
     ($arr:ident, $i:expr) => {
         (($arr[$i / 32] >> ($i % 32)) & 1)
@@ -508,10 +503,10 @@ unsafe extern "C" fn scalarmult_fixed_base(
     scalar: *const u32,
 ) {
     // u32 output_mont_x[8], u32 output_mont_y[8], const u32 scalar[8]
+    let mut scalar2: [u32; 8] = [0; 8];
 
     // Just as with the algorithm used in variable base scalar multiplication, this algorithm requires the scalar to be odd.
     let even: u32 = ((*scalar) & 1) ^ 1;
-    let mut scalar2: [u32; 8] = [0; 8];
     P256_negate_mod_n_if(scalar2.as_mut_ptr(), scalar, even);
 
     // This algorithm conceptually rewrites the odd scalar as s[0] + 2^1*s[1] + 2^2*s[2] + ... + 2^255*s[255], where each s[i] is -1 or 1.
@@ -537,7 +532,7 @@ unsafe extern "C" fn scalarmult_fixed_base(
             } else {
                 P256_double_j(current_point.as_mut_ptr(), current_point.as_ptr());
 
-                let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 1).wrapping_sub(1); // positive: 0, negative: -1
+                let sign: u32 = get_bit!(scalar2, i + 3 * 64 + 32 + 1).wrapping_sub(1); // positive: 0, negative: -1
                 mask = (mask ^ sign) & 7;
                 selected_point.copy_from_slice(&P256_BASEPOINT_PRECOMP2[1][mask as usize]);
                 P256_negate_mod_p_if(
@@ -579,7 +574,6 @@ unsafe extern "C" fn scalarmult_fixed_base(
     // Negate final result if the scalar was initially even.
     P256_negate_mod_p_if(output_mont_y, output_mont_y, even);
 }
-*/
 
 /// Raw scalar multiplication by the base point of the elliptic curve.
 ///
