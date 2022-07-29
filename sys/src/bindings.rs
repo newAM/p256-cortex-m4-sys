@@ -215,38 +215,6 @@ extern "C" {
     ) -> bool;
 }
 extern "C" {
-    #[doc = " Creates an ECDSA signature."]
-    #[doc = ""]
-    #[doc = " The parameter \"k\" shall consist of a 256-bit random integer value. This random value MUST be generated from"]
-    #[doc = " a cryptographically secure random number generator, and MUST be unique for every pair of message hash and"]
-    #[doc = " private key."]
-    #[doc = ""]
-    #[doc = " With a small probability (~ 2^-32), this function will fail and return false for the given \"k\" and this"]
-    #[doc = " function MUST in that case be called again with a new random \"k\", until true is returned. This is in line"]
-    #[doc = " with the ECDSA standard."]
-    #[doc = ""]
-    #[doc = " As an alternative to using a random \"k\", \"k\" might be derived deterministically from the input, using a"]
-    #[doc = " sophisticated hash construction such as RFC 6979, or e.g. by hashing the private key, message hash and a"]
-    #[doc = " retry counter, using a secure hash function such as SHA-256."]
-    pub fn p256_sign(
-        r: *mut u32,
-        s: *mut u32,
-        hash: *const u8,
-        hashlen_in_bytes: u32,
-        private_key: *const u32,
-        k: *const u32,
-    ) -> bool;
-}
-#[doc = " Sign precomputation state."]
-#[doc = ""]
-#[doc = " The content shall be treated as opaque to the API user and shall not be inspected or modified."]
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct SignPrecomp {
-    pub r: [u32; 8usize],
-    pub k_inv: [u32; 8usize],
-}
-extern "C" {
     #[doc = " Creates an ECDSA signature, using a two-step procedure."]
     #[doc = ""]
     #[doc = " This function performs the first of two steps, and accounts for 99% of the time spent for generating an"]

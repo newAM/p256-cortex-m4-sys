@@ -515,13 +515,3 @@ bool p256_sign_step2(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t
     memset(s, 0, 32);
     return false;
 }
-
-bool p256_sign(uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t private_key[8], const uint32_t k[8]) {
-    struct SignPrecomp t;
-    if (!p256_sign_step1(&t, k)) {
-        memset(r, 0, 32);
-        memset(s, 0, 32);
-        return false;
-    }
-    return p256_sign_step2(r, s, hash, hashlen_in_bytes, private_key, &t);
-}

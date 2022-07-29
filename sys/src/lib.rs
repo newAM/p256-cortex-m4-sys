@@ -605,3 +605,55 @@ pub unsafe extern "C" fn p256_scalarmult_base(
         true
     }
 }
+
+/// Sign precomputation state.
+///
+/// The content shall be treated as opaque to the API user and shall not be inspected or modified.
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone)]
+pub struct SignPrecomp {
+    pub r: [u32; 8],
+    pub k_inv: [u32; 8],
+}
+
+/// Creates an ECDSA signature.
+///
+/// The parameter "k" shall consist of a 256-bit random integer value. This random value MUST be generated from
+/// a cryptographically secure random number generator, and MUST be unique for every pair of message hash and
+/// private key.
+///
+/// With a small probability (~ 2^-32), this function will fail and return false for the given "k" and this
+/// function MUST in that case be called again with a new random "k", until true is returned. This is in line
+/// with the ECDSA standard.
+///
+/// As an alternative to using a random "k", "k" might be derived deterministically from the input, using a
+/// sophisticated hash construction such as RFC 6979, or e.g. by hashing the private key, message hash and a
+/// retry counter, using a secure hash function such as SHA-256.
+#[no_mangle]
+pub unsafe extern "C" fn p256_sign(
+    r: *mut u32,
+    s: *mut u32,
+    hash: *const u8,
+    hashlen_in_bytes: u32,
+    private_key: *const u32,
+    k: *const u32,
+) -> bool {
+    // uint32_t r[8], uint32_t s[8], const uint8_t* hash, uint32_t hashlen_in_bytes, const uint32_t private_key[8], const uint32_t k[8]
+    let mut t: SignPrecomp = Default::default();
+    if !p256_sign_step1(&mut t as *mut SignPrecomp, k) {
+        (0..8).for_each(|offset| {
+            *r.offset(offset) = 0;
+            *s.offset(offset) = 0;
+        });
+        false
+    } else {
+        p256_sign_step2(
+            r,
+            s,
+            hash,
+            hashlen_in_bytes,
+            private_key,
+            &mut t as *mut SignPrecomp,
+        )
+    }
+}
