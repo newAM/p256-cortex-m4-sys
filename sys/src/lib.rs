@@ -806,7 +806,7 @@ pub unsafe extern "C" fn p256_verify(
     // Create a table of P, 3P, 5P, ..., 15P, where P is the public key.
     P256_double_j(pk_table[7].as_mut_ptr(), pk_table[0].as_ptr());
     (1..8).for_each(|i| {
-        pk_table.copy_within(i..(i + 1), 7);
+        pk_table.copy_within(7..8, i);
         P256_add_sub_j(
             pk_table[i].as_mut_ptr(),
             pk_table[i - 1].as_ptr(),
